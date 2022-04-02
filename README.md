@@ -1,3 +1,5 @@
+<img src="" height="120" width="300" >
+
 # Doc-Overdue
 
 A Bachelor Degree thesis project:
