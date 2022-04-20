@@ -6,44 +6,47 @@ A Bachelor Degree thesis project:
 Doc-Overdue scans your server and compiles a report of what is installed, what configuration files have been modified and what those modifications are. 
 The script is tested and built for Ubuntu 20.04 ATM
 
-## Features or Example
+## Features
 
-Show what the library does as concisely as possible, developers should be able to figure out **how** your project solves their problem by looking at the code example. Make sure the API you are showing off is obvious, and that your code is short and concise.
+The best summary of the project is the research question:
+
+"To which extent can changes made to system-wide configuration files in Linux systems since their initial installation identified and extracted for further processing by human system administrators or automated configuration management tools?"
+
+TL:DR it finds all configuration files and checks if they have been changed.
+Thsi will give an overview of the system.
 
 ## Motivation
 
-A short description of the motivation behind the creation and maintenance of the project. This should explain **why** the project exists.
+To help administrators find changes made to a system as soon as possible
 
 ## Requirements
 
-This section is optional if there isn't any special dependencies. Else a bulletlist will suffice, e.g.,
-+ [Node.js](https://nodejs.org/)
-+ [React](https://facebook.github.io/react/)
-+ Others
+Requirements for the script to work:
+
++ Only works on Debian systems aka Debian/Ubuntu/Mint
+
++ [Python3](https://facebook.github.io/react/)
+
++ [Sphinx](https://facebook.github.io/react/)
+
 
 ## Installation or Getting Started
 
 Provide code examples and explanations of how to get the project, e.g.,
 
-	git clone https://github.com/Jasonnor/README.md.git
-    cd README.md
-    npm install README.md
-    npm start
+	git clone https://github.com/Nklobe/Doc-Overdue
+    cd Doc-Overdue
+    ./docoverdue.py
 
 ## Usage
 
-Show how to use the project or library.
+[WIP]
+Run the script on the computer you want to scan.
+This produces a folder with the script. This will be availabel via sphinx
     
 ## Reference
 
-+ [jxson](https://gist.github.com/jxson) - [README.md](https://gist.github.com/jxson/1784669)
-+ [gistfrojd](https://gist.github.com/gistfrojd) - [README.md](https://gist.github.com/gistfrojd/5fcd3b70949ac6376f66)
-
-Depending on the size of the project, if it is small and simple enough the reference docs can be added to the README. For medium size to larger projects it is important to at least provide a link to where the API reference docs live.
-
-## Contributors
-
-Let people know how they can dive into the project, include important links to things like issue trackers, irc, twitter accounts if applicable.
+[Ref to article]
 
 ## License
 
