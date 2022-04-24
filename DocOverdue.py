@@ -17,12 +17,14 @@ def bash_command(cmd):
     return sp.stdout.readlines()
 
 
-def run_command(cmd):  # runs command and trims the output
-    rawCMD = subprocess.run(cmd, capture_output=True)
+def run_command(cmd, cwd="."):  # runs command and trims the output
+    print ("Running Command: ", cmd)
+    rawCMD = subprocess.run(cmd, capture_output=True, cwd=cwd)
     outCMD = rawCMD.stdout.splitlines()
     for c in range(len(outCMD)):
         outCMD[c] = outCMD[c].decode('utf-8')
         outCMD[c] = outCMD[c].replace('\'', '')
+
     return outCMD
 
 
@@ -50,42 +52,70 @@ def fetch_package_files(packageList):  # checks files related to package
         cmd = ["dpkg", "-S", p]
         fileList[p] = run_command(cmd)
         sys.stdout.write("Package scanned: ")
-        print(p)
     return fileList
 
 
 def parse_config_files(fileDict):  # checks for files located in /etc
-
     print_sign("Parsing config files")
-
     for f in fileDict.items():  # gets through the items
-        Addcolon = f[0] + ":"
+        Addcolon = f[0] + ": "
         etcFiles = {}
         fileList = []
-        for fileURL in f[1]:  # looping through the file lis
+        for fileURL in f[1]:  # looping through the file list
             if "/etc/" in fileURL and Addcolon in fileURL:
-                print(fileURL)
+                fileURL = fileURL.replace(Addcolon, '')  # makes it a pure URL
                 fileList.append(fileURL)
             etcFiles[f[0]] = fileList
         return etcFiles
 
-    # Lägga in någon form av regex som plockar ut alla delar av det
 
-
-def find_references():
-    # jag ska hitta en bra referens av filerna.
-
+# Gets the package version
+def get_package_version(packageList):
     pass
 
 
-def download_package(packageList):
-    # download package
+def create_folders(fileDict):  # creates folders for configs
+    for f in fileDict.items():
+        for url in f[1]:
+            urlSplit = os.path.split(url)
+            refURL = "ReferenceFiles" + urlSplit[0]
+            print(urlSplit[0])
+            cmd = ["mkdir", "-p", refURL]
+            print(cmd)
+            run_command(cmd)
+
+
+def download_package(packages):
+    print_sign("Downloading packages")
+    for p in packages.items():
+        print(p[0])
+        cmd = ["apt", "download", p[0]]
+        applicationList = run_command(cmd, "PackagesTMP")
+        extract_files(p[0])
+        pass
     pass
 
 
-def extract_files():
-    # extract config files
-    pass
+# Extracting and moving the files to the correct place
+def extract_files(package):  # No list, just one package per time
+    print_sign("Extracting files")
+
+    fileName = run_command("ls", "PackagesTMP" ) #UGLY solution \
+    # runs ls and uses the first result.
+    cmd = ["dpkg", "-x", fileName[0], package]
+
+
+    print(run_command(cmd, "PackagesTMP"))
+
+    # Moving the files to the reference folder
+    #cp -r apt/etc/* ../ReferenceFiles/etc
+    etc = package + "/etc/"
+    cmd = ["cp", "-rv", etc, "../ReferenceFiles"]
+    #rawCMD = subprocess.run(cmd, capture_output=False, cwd="PackagesTMP")
+    print(run_command(cmd, "PackagesTMP"))
+    cmd = ["rm", "-r",  "*"]
+    print(run_command(cmd, "PackagesTMP"))
+
 
 
 def print_sign(label):  # for making pretty signs
@@ -94,15 +124,23 @@ def print_sign(label):  # for making pretty signs
     print("#" * 40)
 
 
-
-
+# Main Runtime
 installedPackages = fetch_installed_packages()
-#applicationFiles = fetch_package_files(installedPackages)
+# applicationFiles = fetch_package_files(installedPackages)
 applicationFiles = fetch_package_files(["apt"])
-#print(applicationFiles)
+# print(applicationFiles)
 etcFiles = parse_config_files(applicationFiles)
-for x in etcFiles["apt"]:
-    print(x)
+create_folders(etcFiles)
+download_package(etcFiles)
+
+
+
+
+#for x in etcFiles["apt"]:
+#    print(x)
+
+
+
 #print(etcFiles)
 
 #print(applicationFiles)
