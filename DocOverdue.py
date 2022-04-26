@@ -7,10 +7,16 @@ Main script for Doc-Overdue
 import os
 import subprocess
 import sys
+import filecmp
+import difflib
+import re
+
+debugging = False
 
 print("#" * 40)
 print("Starting Doc-Overdue")
 print("#" * 40)
+
 
 
 def bash_command(cmd):
@@ -18,8 +24,10 @@ def bash_command(cmd):
     return sp.stdout.readlines()
 
 
-def run_command(cmd, cwd=".", outputCap=True):  # runs command and trims the output
-    print("Running Command: ", cmd)
+# runs command and trims the output
+def run_command(cmd, cwd=".", outputCap=True):
+    if debugging:
+        print("Running Command: ", cmd)
     rawCMD = subprocess.run(cmd, capture_output=outputCap, cwd=cwd)
 
     if outputCap:
@@ -27,13 +35,14 @@ def run_command(cmd, cwd=".", outputCap=True):  # runs command and trims the out
         for c in range(len(outCMD)):
             outCMD[c] = outCMD[c].decode('utf-8')
             outCMD[c] = outCMD[c].replace('\'', '')
-            print(outCMD[c])
-
+            if debugging:
+                print(outCMD[c])
         return outCMD
     else:
         return 0
 
 
+# Converts bytes to UTF strings
 def parse_output(byteList):
     byteList = byteList.stdout.splitlines()
     for c in range(len(byteList)):
@@ -54,35 +63,56 @@ def fetch_installed_packages():  # gets all installed packages via dpkg
 def fetch_package_files(packageList):  # checks files related to package
     print_sign("Fetching package files")
     fileList = {}
+    amount = len(packageList)
+    current = 0
     for p in packageList:
         cmd = ["dpkg", "-S", p]
         fileList[p] = run_command(cmd)
-        sys.stdout.write("Package scanned: ")
+        print(current, "/", amount, "Packages scanned: ", p)
+        current += 1
 
-    for f in fileList.keys():
-        print(f)
+        print(p)
+
+    if debugging:
+        for f in fileList.keys():
+            print(f)
 
     return fileList
+
+def find_package_name(txt):
+    pckName = re.search("^\S+\s", txt)
+    pckName = pckName.group(0)
+    print("pckName:", pckName)
+    return pckName
 
 
 def parse_config_files(fileDict):  # checks for files located in /etc
     print_sign("Parsing config files")
     etcFiles = {}
+    amount = len(fileDict.items()) # Amount of packages
+    current = 0
     for f in fileDict.items():  # gets through the items
-        Addcolon = f[0] + ": "
 
         fileList = []
         for fileURL in f[1]:  # looping through the file list
-            if "/etc/" in fileURL and Addcolon in fileURL:
-                fileURL = fileURL.replace(Addcolon, '')  # makes it a pure URL
-                fileList.append(fileURL)
+            if "/etc/" in fileURL:
+                print(fileURL, " OK")
+                pckName = find_package_name(fileURL)
+                fileURL = fileURL.replace(pckName, '')  # makes it a pure URL
+                if os.path.isfile(fileURL):  # ignores directories
+                    fileList.append(fileURL)
+                else:
+                    print(fileURL, " Is a folder!")
             etcFiles[f[0]] = fileList
     print(etcFiles)
+
+    print("Package ", current, "/", amount)
     return etcFiles
 
 
 # Gets the package version
 def get_package_version(packageList):
+
     pass
 
 
@@ -99,13 +129,21 @@ def create_folders(fileDict):  # creates folders for configs
 
 def download_package(packages):
     print_sign("Downloading packages")
+    amount = len(packages.items())
+    current = 0
     for p in packages.items():
 
-        print("Downloading ", p[0])
-        cmd = ["apt", "download", p[0]]
-        applicationList = run_command(cmd, "PackagesTMP", False)
-        extract_files(p[0])
+        print("Downloading package ", current, "/", amount, p[0])
+        try:
+            cmd = ["apt", "download", p[0]]
+            applicationList = run_command(cmd, "PackagesTMP", False)
+            extract_files(p[0])
+        except Exception:
+            print(Exception)
+            print("Failed to download package!")
+
         pass
+        current += 1
     pass
 
 
@@ -113,25 +151,20 @@ def download_package(packages):
 def extract_files(package):  # No list, just one package per time
     print_sign("Extracting files")
 
-    fileName = run_command("ls", "PackagesTMP" )  # UGLY solution \
+    fileName = run_command("ls", "PackagesTMP")  # UGLY solution \
     # runs ls and uses the first result.
     cmd = ["dpkg", "-x", fileName[0], package]
-
-    print(run_command(cmd, "PackagesTMP"))
+    run_command(cmd, "PackagesTMP")
 
     # Moving the files to the reference folder
-    # cp -r apt/etc/* ../ReferenceFiles/etc
     etc = package + "/etc/"
     cmd = ["cp", "-rv", etc, "../ReferenceFiles"]
-    # rawCMD = subprocess.run(cmd, capture_output=False, cwd="PackagesTMP")
-    print(run_command(cmd, "PackagesTMP"))
-    fileName = run_command("ls", "PackagesTMP" )
+    run_command(cmd, "PackagesTMP")
+    # Fetching all files and folders for removal
+    fileName = run_command("ls", "PackagesTMP")
     for f in fileName:
         cmd = ["rm", "-rv",  f]
-        print(run_command(cmd, "PackagesTMP", False))
-
-
-
+        run_command(cmd, "PackagesTMP")
 
 
 def print_sign(label):  # for making pretty signs
@@ -140,14 +173,73 @@ def print_sign(label):  # for making pretty signs
     print("#" * 40)
 
 
+def check_for_modified_files(packageList):
+    print_sign("Checking for modified files")
+    print(packageList)
+    filesFound = 0
+    for p in packageList.items():  # gets through the items
+        for fileURL in p[1]:
+            # compare files
+
+            referenceFile = "ReferenceFiles" + fileURL
+            # print(referenceFile, " : ", fileURL)
+            try:
+                comparison = filecmp.cmp(fileURL, referenceFile)
+                if comparison is False:  # if difference
+                    print(comparison)
+                    print(fileURL)
+                    filesFound += 1
+                    try:
+                        create_diff([fileURL, referenceFile])
+                    except IsADirectoryError:
+                        print(IsADirectoryError)
+                    except FileNotFoundError:
+                        print(FileNotFoundError)
+            except FileNotFoundError:
+                print(FileNotFoundError, fileURL)
+    found = str(filesFound) + " Modified files found"
+    print_sign(found)
+
+
+
+def create_diff(files):
+    print_sign("Creating Diffs")
+    # Files is a list of [ModifiedFile, ReferenceFile]
+    fromFile = files[1]
+    toFile = files[0]
+    fromLines = open(fromFile, 'U').readlines()
+    toLines = open(toFile, 'U').readlines()
+    fromFileTitle = "<h3>Reference file: " + fromFile + "</h3>"
+    toFileTitle = "<h3>Your file: " + toFile + "</h3>"
+    diff = difflib.HtmlDiff().make_file(fromLines, toLines, fromFileTitle, toFileTitle)
+    # sys.stdout.writelines(diff)
+    fileName = files[1] + ".diff.html"
+    try:
+        with open(fileName, "w") as file:
+            print("Found diff in file ", fileName)
+            file.write(diff)
+    except Exception:
+        print("Error in checking diff!: ", Exception)
+
+
 # Main Runtime
 installedPackages = fetch_installed_packages()
+shortList = []
+for l in range(50):
+    shortList.append(installedPackages[l+300])
+
+applicationFiles = fetch_package_files(shortList)
+
 #applicationFiles = fetch_package_files(installedPackages)
-applicationFiles = fetch_package_files(["apt", 'anacron', 'alsa-utils', 'bind9-dnsutils', 'binutils'])
+#applicationFiles = fetch_package_files(["apt", 'anacron', 'alsa-utils', 'bind9-dnsutils', 'binutils', "ssh", "openssh-client"])
+#applicationFiles = fetch_package_files(["ssh", "openssh-client"])
 #print(applicationFiles)
 etcFiles = parse_config_files(applicationFiles)
+print(etcFiles)
 create_folders(etcFiles)
-download_package(etcFiles)
+
+#download_package(etcFiles)
+check_for_modified_files(etcFiles)
 
 
 #for x in etcFiles["apt"]:
