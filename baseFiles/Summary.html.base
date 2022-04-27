@@ -1,0 +1,10 @@
+<h2>
+==============================================================<br>
+Scanned packages:<font color="green"> <b> [scannedPackages] <br></b> </font>
+Scanned files:<font color="green"><b> [scannedFiles] </b> <br></font>
+Found Config files:<font color="green"><b> [configFiles] </b> <br></font>
+Modified config files:<b> <font color="blue"> [modifiedFiles] </b> <br></font>
+New Files:<b> <font color="blue"> [newFiles] </b> <br></font>
+Orphan files:<b><font color="red"> [orphanFiles] </b> <br></font>
+==============================================================<br>
+</h2>
