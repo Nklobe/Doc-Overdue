@@ -18,10 +18,21 @@ print("Starting Doc-Overdue")
 print("#" * 40)
 
 
-
 def bash_command(cmd):
     sp = subprocess.Popen(['/bin/bash', '-c', cmd], stdout=subprocess.PIPE)
     return sp.stdout.readlines()
+
+
+# Creates folders misc items needed to run the script
+def first_run():
+    print_sign("Starting Doc-Overdue")
+    cmd = ["mkdir", "-p", "PackagesTMP"]
+    run_command(cmd)
+    cmd = ["mkdir", "-p", "ReferenceFiles/etc"]
+    run_command(cmd)
+    # Öppna Loggfiler?
+
+    pass
 
 
 # runs command and trims the output
@@ -70,7 +81,6 @@ def fetch_package_files(packageList):  # checks files related to package
         fileList[p] = run_command(cmd)
         print(current, "/", amount, "Packages scanned: ", p)
         current += 1
-
         print(p)
 
     if debugging:
@@ -201,7 +211,6 @@ def check_for_modified_files(packageList):
     print_sign(found)
 
 
-
 def create_diff(files):
     print_sign("Creating Diffs")
     # Files is a list of [ModifiedFile, ReferenceFile]
@@ -223,6 +232,8 @@ def create_diff(files):
 
 
 # Main Runtime
+first_run()
+
 installedPackages = fetch_installed_packages()
 shortList = []
 for l in range(50):
