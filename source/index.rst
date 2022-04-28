@@ -9,8 +9,6 @@ Welcome to Doc-Overdue
 .. image:: _static/LOGOBTMedium.png
 Your system has just been scanned by Doc-Overdue
 
-
-
 System Summary
 ===================================
 
@@ -27,6 +25,8 @@ Navigation
 
    changedFiles
    nonPackageFiles
+   allConfigFiles
+
 
 Downloadable version
 ===================================

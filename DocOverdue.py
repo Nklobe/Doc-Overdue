@@ -17,6 +17,7 @@ scannedFilesCount = 0  # Amount of scanned files
 configFilesCount = 0  # Amount of config files
 
 nonPackagedFiles = []  # files not found in packages
+allConfigFiles = []  # All config files found
 
 print("#" * 40)
 print("Starting Doc-Overdue")
@@ -101,9 +102,11 @@ def find_package_name(txt):
     return pckName
 
 
+
 def parse_config_files(fileDict):  # checks for files located in /etc
     global scannedFilesCount
     global configFilesCount
+    global allConfigFiles
 
     print_sign("Parsing config files")
     etcFiles = {}
@@ -115,6 +118,7 @@ def parse_config_files(fileDict):  # checks for files located in /etc
             scannedFilesCount += 1
             if "/etc/" in fileURL:
                 configFilesCount += 1
+                allConfigFiles.append(fileURL)
                 print(fileURL, " OK")
                 pckName = find_package_name(fileURL)
                 fileURL = fileURL.replace(pckName, '')  # makes it a pure URL
@@ -225,11 +229,11 @@ def check_for_modified_files(packageList):
             except Exception:
                 print("Other error")
 
-
-
     found = str(filesFound) + " Modified files found"
     if filesFound > 0:
         add_diffs_2_sphinx(diffFiles)
+    else:
+        add_diffs_2_sphinx([])
     print_sign(found)
 
     # Adding amount of files to summary
@@ -274,7 +278,7 @@ def add_diffs_2_sphinx(files):
             linkLine = ".. _" + f + ": ../../ReferenceFiles/" + f + ".diff.html"
             lines.append(linkLine)
             pass
-
+        lines.append("======================================")
         with open('source/changedFiles.rst', 'w') as file:
             file.writelines(lines)
         pass
@@ -297,7 +301,29 @@ def create_non_package_files():
             lines.append("    <a link href='" + f + "'>" + f + "<a/><br>")
             pass
         print(lines)
+        lines.append("======================================")
         with open('source/nonPackageFiles.rst', 'w') as file:
+            file.writelines(lines)
+        pass
+
+    pass
+
+
+# Create a list of all files
+def create_all_files():
+    print_sign("Creating_all_files")
+    global allConfigFiles
+    lines = []
+    with open('baseFiles/allConfigFiles.rst.base', 'r') as file:
+        for g in file:
+            lines.append(g)
+        lines.append("\n")
+        for f in allConfigFiles:
+            lines.append("\n")
+            lines.append("    <a link href='" + f + "'>" + f + "<a/><br>")
+            pass
+        print(lines)
+        with open('source/allConfigFiles.rst', 'w') as file:
             file.writelines(lines)
         pass
 
@@ -338,18 +364,22 @@ def build_sphinx():
     pass
 
 
+# Show information after the script is done
+def show_info():
+    pass
+
 # Main Runtime
 first_run()
 
 installedPackages = fetch_installed_packages()
 shortList = []
-# for l in range(50):
-#    shortList.append(installedPackages[l+300])
+for l in range(10):
+    shortList.append(installedPackages[l+200])
 
 
-#applicationFiles = fetch_package_files(shortList)
+applicationFiles = fetch_package_files(shortList)
 
-applicationFiles = fetch_package_files(installedPackages)
+#applicationFiles = fetch_package_files(installedPackages)
 #applicationFiles = fetch_package_files(["apt", 'anacron', 'alsa-utils', 'bind9-dnsutils', 'binutils', "ssh", "openssh-client"])
 #applicationFiles = fetch_package_files(["ssh", "openssh-client", "snmp", "dpkg"])
 #print(applicationFiles)
@@ -360,76 +390,5 @@ download_package(etcFiles)
 check_for_modified_files(etcFiles)
 create_summary()
 create_non_package_files()
+create_all_files()
 build_sphinx()
-
-
-#for x in etcFiles["apt"]:
-#    print(x)
-
-
-
-#print(etcFiles)
-
-#print(applicationFiles)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# for x in applicationList:
-#   print(x)
-#   a = 1
-
-
-# testar = os.system("dpkg-query -f '${Package}\n' -W")
-
-#rawPacketlist = subprocess.run(["dpkg-query", "-f", "'${Package}\n'", "-W"], capture_output=True, encoding='ASCII')
-
-# rawPacketlist = subprocess.check_output(["dpkg-query", "-f", "'${Package}\n'", "-W"], shell=True, )
-
-
-#print(rawPacketlist)
-#testar = str(rawPacketlist)
-
-#linjer = rawPacketlist.stdout.splitlines()
-#testarList = testar.split('\\n')
-
-#print(bash_command("ls"))
-
-#for x in range(len(linjer)):  # Convrt subprocess.object 2 strings trims list
-    #linjer[x] = str(linjer[x]).lstrip('b\"\'\'')
-    #linjer[x] = linjer[x].rstrip('\"')
-    #print(linjer[x].decode('ascii'))
-    #a = 0
-
-#print(type(rawPacketlist))
-# print(testarList)
-#print("#" * 40)
-
-
-
-
-# detta funkar!
-#packetTest = subprocess.run(["dpkg", "-S", "htop"], capture_output=True)
-#packetlinjer = packetTest.stdout.splitlines()
-#for y in range(len(packetlinjer)):
-#    packetlinjer[y] = packetlinjer[y].decode('utf-8')
-    #print(packetlinjer[y])
-
-
-
-
-
