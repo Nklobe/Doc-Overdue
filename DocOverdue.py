@@ -222,6 +222,8 @@ def check_for_modified_files(packageList):
             except FileNotFoundError:
                 print(FileNotFoundError, fileURL)
                 nonPackagedFiles.append(fileURL)
+            except Exception:
+                print("Other error")
 
 
 
