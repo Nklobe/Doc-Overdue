@@ -373,13 +373,13 @@ first_run()
 
 installedPackages = fetch_installed_packages()
 shortList = []
-for l in range(10):
-    shortList.append(installedPackages[l+200])
+#for l in range(10):
+#    shortList.append(installedPackages[l+200])
 
 
-applicationFiles = fetch_package_files(shortList)
+#applicationFiles = fetch_package_files(shortList)
 
-#applicationFiles = fetch_package_files(installedPackages)
+applicationFiles = fetch_package_files(installedPackages)
 #applicationFiles = fetch_package_files(["apt", 'anacron', 'alsa-utils', 'bind9-dnsutils', 'binutils', "ssh", "openssh-client"])
 #applicationFiles = fetch_package_files(["ssh", "openssh-client", "snmp", "dpkg"])
 #print(applicationFiles)
