@@ -86,7 +86,6 @@ def fetch_package_files(packageList):  # checks files related to package
         fileList[p] = run_command(cmd)
         print(current, "/", amount, "Packages scanned: ", p)
         current += 1
-        print(p)
 
     if debugging:
         for f in fileList.keys():
@@ -348,14 +347,14 @@ shortList = []
 
 #applicationFiles = fetch_package_files(shortList)
 
-#applicationFiles = fetch_package_files(installedPackages)
+applicationFiles = fetch_package_files(installedPackages)
 #applicationFiles = fetch_package_files(["apt", 'anacron', 'alsa-utils', 'bind9-dnsutils', 'binutils', "ssh", "openssh-client"])
-applicationFiles = fetch_package_files(["ssh", "openssh-client", "snmp", "dpkg"])
+#applicationFiles = fetch_package_files(["ssh", "openssh-client", "snmp", "dpkg"])
 #print(applicationFiles)
 etcFiles = parse_config_files(applicationFiles)
 create_folders(etcFiles)
 
-#download_package(etcFiles)
+download_package(etcFiles)
 check_for_modified_files(etcFiles)
 create_summary()
 create_non_package_files()
