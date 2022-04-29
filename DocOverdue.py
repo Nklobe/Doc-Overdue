@@ -362,7 +362,7 @@ def create_non_package_files():
         lines.append("\n")
         for f in nonPackagedFiles:
             lines.append("\n")
-            lines.append("    <a link href='" + f + "'>" + f + "<a/><br>")
+            lines.append("    <a link href='../../ReferenceFiles" + f + "'>" + f + "<a/><br>")
             pass
         print(lines)
         lines.append("======================================")
@@ -388,7 +388,8 @@ def create_all_files():
             lines.append("No config files found!")
         for f in allConfigFiles:
             lines.append("\n")
-            lines.append("    <a link href='" + f + "'>" + f + "<a/><br>")
+            lines.append(str(" - " + f))
+            #lines.append("    <a link href='../../ReferenceFiles" + f + "'>" + f + "<a/><br>")
             pass
         with open('source/allConfigFiles.rst', 'w') as file:
             file.writelines(lines)
@@ -412,7 +413,8 @@ def create_all_orphan_files():
             lines.append("No orphan files found!")
         for f in allOrphanFiles:
             lines.append("\n")
-            lines.append("    <a link href='" + f + "'>" + f + "<a/><br>")
+            lines.append(str(" - " + f))
+            #lines.append("    <a link href='../../ReferenceFiles" + f + "'>" + f + "<a/><br>")
             pass
 
         with open('source/allOrphanFiles.rst', 'w') as file:
@@ -496,7 +498,7 @@ def show_info():
     print("Your report is available under build/html")
     print("The report is also available as a PDF and epub")
     print("If you want to expose the report via a webserver you can do so with the command:")
-    print(" python3 -m http.server --directory build/html/  ")
+    print(" python3 -m http.server  ")
     print("#" * 40)
     pass
 
