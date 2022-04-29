@@ -12,7 +12,7 @@ import difflib
 import re
 
 debugging = False  # show more info
-shortrun = True  # only scan 100 files as a small test
+shortrun = False  # only scan 100 files as a small test
 
 
 largeScan = False  # Scans ALL packages on your system finding files. OBS! SLOW
