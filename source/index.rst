@@ -38,6 +38,7 @@ Downloadable version
 .. raw:: html
 
 
+    <a link href="Doc-Overdue-Html.tar.gz">Compressed HTML - version</a> <br>
     <a link href="doc-overdue.pdf">LatexPDF - version</a>
 
 

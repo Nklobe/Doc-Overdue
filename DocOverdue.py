@@ -12,7 +12,7 @@ import difflib
 import re
 
 debugging = False  # show more info
-shortrun = False  # only scan 100 files as a small test
+shortrun = True  # only scan 100 files as a small test
 
 
 largeScan = False  # Scans ALL packages on your system finding files. OBS! SLOW
@@ -468,7 +468,9 @@ def create_summary():
 
 
 def build_sphinx():
-    """Building sphinx"""
+    """Building sphinx
+    and move files making the downloadble
+    """
     print_sign("Building sphinx")
     cmd = ["make", "clean"]
     run_command(cmd)
@@ -481,6 +483,9 @@ def build_sphinx():
     run_command(cmd)
     cmd = ["cp", "build/latex/doc-overdue.pdf", "build/html"]
     run_command(cmd)
+    cmd = ["tar", "czf", "build/html/Doc-Overdue-Html.tar.gz", "."]
+    run_command(cmd)
+
     pass
 
 
@@ -524,8 +529,6 @@ applicationFiles = fetch_package_files(installedPackages)
 #etcFiles = parse_config_files(applicationFiles)
 
 #create_folders(etcFiles)
-
-#download_package(etcFiles)
 check_for_modified_files(etcFiles)
 create_summary()
 create_non_package_files()
