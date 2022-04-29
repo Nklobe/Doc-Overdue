@@ -1,14 +1,10 @@
-All found config files
-======================
+Orphan files
+============
 
-All configuration files found on the system
+
+Files that could not be connected to any package at all.
 
 .. note::
     The hyperlinks only works if the script is run the local machine
 
 .. raw:: html
-
-
-
-
-

@@ -1,14 +1,11 @@
-All found config files
-======================
+Unchanged files
+===============
 
-All configuration files found on the system
+
+Files that where compared but no changes where found
 
 .. note::
     The hyperlinks only works if the script is run the local machine
 
 .. raw:: html
-
-
-
-
 
