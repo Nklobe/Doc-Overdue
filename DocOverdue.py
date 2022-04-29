@@ -439,7 +439,7 @@ def create_all_unchanged_files():
             lines.append("No orphan files found!")
         for f in allOrphanFiles:
             lines.append("\n")
-            lines.append("    <a link href='" + f + "'>" + f + "<a/><br>")
+            lines.append("    <a link href='../../ReferenceFiles" + f + "'>" + f + "<a/><br>")
             pass
 
         with open('source/allUnchangedFiles.rst', 'w') as file:
