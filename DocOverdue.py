@@ -12,6 +12,7 @@ import filecmp
 import difflib
 import re
 
+
 debugging = True  # show more info
 shortrun = False  # only scan 100 files as a small test
 
@@ -47,30 +48,41 @@ def first_run():
     run_command(cmd)
 
 
-def run_command(cmd, cwd=".", outputCap=True, shell=False):
+def run_command(cmd, cwd=".", outputCap=True, shell=False, captError=False):
     """Runs command and trims the output"""
+    # OBS! captError=True returns a LIST of [Errorcode, stdout/errout]
     if debugging:
         print("Running Command: ", cmd)
-    rawCMD = Popen(cmd, stdout=PIPE, cwd=cwd)
+    rawCMD = Popen(cmd, stdout=PIPE, stderr=PIPE, cwd=cwd)
     print("Waiting for command ", str(cmd), " to complete")
-
-
     #outCMD = rawCMD.stdout.splitlines()
     outCMD = rawCMD.communicate()
 
-    outCMD = outCMD[0].decode("utf-8")
-    outCMD = outCMD.split("\n")
+    if captError:  # if the function was called with captError=True
+        cmdList = [True,""]
+        if rawCMD.returncode:
+            print("Command Failed")
+            cmdList[0] = True
+            cmdList[1] = outCMD[1].decode('utf-8')
+            print(cmdList[1])
+            #cmdList[1] = outCMD[1].split("\n")
+        else:
+            print("Command Successfull")
+            cmdList[0] = False
+            cmdList[1] = outCMD[0].decode('utf-8')
+            cmdList[1] = str(outCMD[0]).split("\n")
+            print(cmdList[1])
+        outCMD = cmdList
+    else:
+        outCMD = outCMD[0].decode("utf-8")
+        outCMD = outCMD.split("\n")
+
 
     #conversionList = str(outCMD[0]).split('\\n')
     #print(outCMD)
-    for c in range(len(outCMD)):
-        #outCMD[c] = outCMD[c].decode('utf-8')
-        #outCMD[c] = outCMD[c].replace('\'', '')
-        if debugging:
-            print(outCMD[c])
 
-    print(type(outCMD))
-    print("Testar")
+    if debugging:
+        print(outCMD)
     return outCMD
 
 
@@ -135,14 +147,15 @@ def find_origin_package(allFiles):
     amount = len(allFiles)
     current = 0
     for file in allFiles:
+        print(file)
         cmd = ["dpkg", "-S", file]
-        rawCMD = run_command(cmd, shell=False, outputCap=True)
-        if len(rawCMD) == 0:
+        rawCMD = run_command(cmd, shell=False, outputCap=True, captError=True)
+        if rawCMD[0] is True:
             print("Orphan File found! ", file)
             allOrphanFiles.append(file)
         else:
-            for line in rawCMD:
-                if len(line) == 0:
+            for line in rawCMD[1]:
+                if len(line) == 0 or line == "b''":
                     print("No Files found!")
                     break
                 print("Packages Found")
@@ -182,17 +195,18 @@ def fetch_package_files(packageList):
 
 def find_package_name(txt, colon=True):
     """Extracts the package name from found strings ex: package: /etc/conf.conf"""
-    print("TXT TYPE: ", type(txt))
-    print("TXT", txt)
     if len(txt) == 0:
         txt = " "
 
     pckName = re.search("^\S+\s", txt)
-
-    pckName = pckName.group(0)
+    if pckName == None:
+        pckName = ""
+    else:
+        pckName = pckName.group(0)
 
     if colon is False:
         pckName = pckName.replace(": ", "")
+    pckName = pckName.replace("\n", "")
     print("pckName:", pckName)
     return pckName
 
@@ -307,7 +321,8 @@ def check_for_modified_files(packageList):
     for p in packageList.items():  # gets through the items
         for fileURL in p[1]:
             # compare files
-
+            fileURL = fileURL.replace('\\n', "")
+            fileURL = fileURL.replace('\'', "")
             referenceFile = "ReferenceFiles" + fileURL
             print(referenceFile, " : ", fileURL)
 
@@ -325,6 +340,7 @@ def check_for_modified_files(packageList):
                     except FileNotFoundError:
                         print(FileNotFoundError)
                 else:
+                    print("Unchanged file: ", fileURL)
                     allUnchangedFiles.append(fileURL)
             except FileNotFoundError:
                 print(FileNotFoundError, fileURL)
@@ -468,16 +484,17 @@ def create_all_unchanged_files():
     """Create a list of all unchanged files in Sphinx"""
     print_sign("Creating all unchanged files")
     global allUnchangedFiles
+    print(allUnchangedFiles)
     allUnchangedFiles.sort()
     lines = []
     with open('baseFiles/allUnchangedFiles.rst.base', 'r') as file:
         for g in file:
             lines.append(g)
         lines.append("\n")
-        if len(allOrphanFiles) == 0:
+        if len(allUnchangedFiles) == 0:
             lines.append("\n")
             lines.append("No orphan files found!")
-        for f in allOrphanFiles:
+        for f in allUnchangedFiles:
             lines.append("\n")
             lines.append("    <a link href='../../ReferenceFiles" + f + "'>" + f + "<a/><br>")
             pass
@@ -500,6 +517,7 @@ def create_summary():
         filedata = filedata.replace('[scannedPackages]', str(summary["scannedPackages"]))
         #filedata = filedata.replace('[scannedFiles]', str(len(allConfigFiles)))
         filedata = filedata.replace('[modifiedFiles]', str(summary["modifiedFiles"]))
+        filedata = filedata.replace('[unmodifiedFiles]', str(len(allUnchangedFiles)))
         filedata = filedata.replace('[newFiles]', str(summary["newFiles"]))
         filedata = filedata.replace('[orphanFiles]', str(len(allOrphanFiles)))
         filedata = filedata.replace('[configFiles] ', str(len(allConfigFiles)))
@@ -546,7 +564,6 @@ def show_info():
 # Main Runtime
 first_run()
 
-
 foundEtcFiles = scan_files_etc()
 
 #installedPackages = fetch_installed_packages()
@@ -563,6 +580,7 @@ if shortrun:
     etcFiles = find_origin_package(shortList)
 else:
     etcFiles = find_origin_package(foundEtcFiles)
+
 download_package(etcFiles)
 
 applicationFiles = fetch_package_files(installedPackages)
