@@ -1,8 +1,9 @@
 <h2>
 ==============================================================<br>
 Scanned packages:<font color="green"> <b> [scannedPackages] <br></b> </font>
-Found Config files:<font color="green"><b> [configFiles] </b> <br></font>
-Modified config files:<b> <font color="blue"> [modifiedFiles] </b> <br></font>
-Orphan files:<b><font color="red"> [orphanFiles] </b> <br></font>
+Found Config files:<font color="green"><b> <a link href="allConfigFiles.html">  [configFiles] </a> </b> <br></font>
+Modified config files:<b> <font color="blue"> <a link href="changedFiles.html">  [modifiedFiles] </a> </b> <br></font>
+Modified config files:<b> <font color="orange"> <a link href="allUnchangedFiles.html"> [unmodifiedFiles] </a> </b> <br></font>
+Orphan files:<b><font color="red"> <a link href="allOrphanFiles.html"> [orphanFiles] </a> </b> <br></font>
 ==============================================================<br>
 </h2>
