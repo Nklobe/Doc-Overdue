@@ -4,16 +4,15 @@ Main script for Doc-Overdue
 @package DocOverdue
 '''
 
-
-
 import os
 import subprocess
+from subprocess import Popen, PIPE
 import sys
 import filecmp
 import difflib
 import re
 
-debugging = False  # show more info
+debugging = True  # show more info
 shortrun = False  # only scan 100 files as a small test
 
 
@@ -52,6 +51,32 @@ def run_command(cmd, cwd=".", outputCap=True, shell=False):
     """Runs command and trims the output"""
     if debugging:
         print("Running Command: ", cmd)
+    rawCMD = Popen(cmd, stdout=PIPE, cwd=cwd)
+    print("Waiting for command ", str(cmd), " to complete")
+
+
+    #outCMD = rawCMD.stdout.splitlines()
+    outCMD = rawCMD.communicate()
+
+    outCMD = outCMD[0].decode("utf-8")
+    outCMD = outCMD.split("\n")
+
+    #conversionList = str(outCMD[0]).split('\\n')
+    #print(outCMD)
+    for c in range(len(outCMD)):
+        #outCMD[c] = outCMD[c].decode('utf-8')
+        #outCMD[c] = outCMD[c].replace('\'', '')
+        if debugging:
+            print(outCMD[c])
+
+    print(type(outCMD))
+    print("Testar")
+    return outCMD
+
+
+    # old version
+    """if debugging:
+        print("Running Command: ", cmd)
     rawCMD = subprocess.run(cmd, capture_output=outputCap, cwd=cwd, shell=shell)
 
     if outputCap:
@@ -64,7 +89,7 @@ def run_command(cmd, cwd=".", outputCap=True, shell=False):
 
         return outCMD
     else:
-        return 0
+        return 0"""
 
 
 def parse_output(byteList):
@@ -79,11 +104,11 @@ def parse_output(byteList):
 def scan_files_etc():
     """Find all files under /etc and find related packages"""
     print("Scanning /etc")
-    #cmd = ["find", "-L /etc/", "-type", "f", "-name", "'*'"]
+    #cmd = ["find", "-L", "/etc/", "-type", "f", "-name", "'*'"]
     cmd = ["sh", "findEtcFiles.sh"]
     allFiles = run_command(cmd, shell=False, outputCap=True)
     #allFiles = subprocess.run(cmd, capture_output=True, shell=True)
-
+    print("Allfiles: ", allFiles)
     return allFiles
 
 
@@ -102,6 +127,9 @@ def find_origin_package(allFiles):
     The inverse of fetch_package_files"""
     global allOrphanFiles
     global allConfigFiles
+
+    print("All Files: ", allFiles)
+
     allConfigFiles = allFiles
     packages = {}
     amount = len(allFiles)
@@ -114,7 +142,10 @@ def find_origin_package(allFiles):
             allOrphanFiles.append(file)
         else:
             for line in rawCMD:
-                ("Packages Found")
+                if len(line) == 0:
+                    print("No Files found!")
+                    break
+                print("Packages Found")
                 print(line)
                 pckg = find_package_name((line), False)
                 fileURL = line
@@ -151,8 +182,15 @@ def fetch_package_files(packageList):
 
 def find_package_name(txt, colon=True):
     """Extracts the package name from found strings ex: package: /etc/conf.conf"""
+    print("TXT TYPE: ", type(txt))
+    print("TXT", txt)
+    if len(txt) == 0:
+        txt = " "
+
     pckName = re.search("^\S+\s", txt)
+
     pckName = pckName.group(0)
+
     if colon is False:
         pckName = pckName.replace(": ", "")
     print("pckName:", pckName)
@@ -231,12 +269,12 @@ def download_package(packages):
     summary["scannedFiles"] = scannedFilesCount
 
 
-
 def extract_files(package):  # No list, just one package per time
     """Extracting and moving the files to the correct place"""
     print_sign("Extracting files")
 
-    fileName = run_command("ls", "PackagesTMP")  # UGLY solution \
+    fileName = run_command("ls", cwd="PackagesTMP")  # UGLY solution \
+    print("FileNAME: ", fileName)
     # runs ls and uses the first result.
     cmd = ["dpkg", "-x", fileName[0], package]
     run_command(cmd, "PackagesTMP")
@@ -249,7 +287,7 @@ def extract_files(package):  # No list, just one package per time
     fileName = run_command("ls", "PackagesTMP")
     for f in fileName:
         cmd = ["rm", "-rv",  f]
-        run_command(cmd, "PackagesTMP")
+        run_command(cmd, cwd="PackagesTMP")
 
 
 def print_sign(label):
@@ -514,13 +552,12 @@ foundEtcFiles = scan_files_etc()
 #installedPackages = fetch_installed_packages()
 installedPackages = []
 
-
 #for l in range(10):
 #    shortList.append(installedPackages[l+200])
 
 if shortrun:
     shortList = []
-    for L in range(150):
+    for L in range(50):
         shortList.append(foundEtcFiles[L])
 
     etcFiles = find_origin_package(shortList)
