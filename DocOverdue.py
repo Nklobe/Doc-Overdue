@@ -17,7 +17,7 @@ debugging = True  # show more info
 shortrun = False  # only scan 100 files as a small test
 
 
-largeScan = False  # Scans ALL packages on your system finding files. OBS! SLOW
+largeScan = False  # Scans ALL packages on your system finding files. OBS! SLOW [Not implemented]
 
 scannedFilesCount = 0  # Amount of scanned files
 configFilesCount = 0  # Amount of config files
@@ -26,6 +26,7 @@ nonPackagedFiles = []  # files not found in packages
 allUnchangedFiles = []  # All unchanged config files found
 allConfigFiles = []  # All config files found
 allOrphanFiles = []  # All orphan files found
+allPackages = []
 
 print("#" * 40)
 print("Starting Doc-Overdue")
@@ -139,6 +140,7 @@ def find_origin_package(allFiles):
     The inverse of fetch_package_files"""
     global allOrphanFiles
     global allConfigFiles
+    global allPackages
 
     print("All Files: ", allFiles)
 
@@ -147,7 +149,16 @@ def find_origin_package(allFiles):
     amount = len(allFiles)
     current = 0
     for file in allFiles:
-        print(file)
+        print("File: " + file)
+        #Sort away unwanted files
+        #Checks for certificats
+        if ".pem" in file or ".0" in file:
+            print("Cert found!")
+            continue
+        #Check if its a folder
+        if os.path.isdir(file):
+            print(file + " Is directory!")
+            continue
         cmd = ["dpkg", "-S", file]
         rawCMD = run_command(cmd, shell=False, outputCap=True, captError=True)
         if rawCMD[0] is True:
@@ -164,6 +175,7 @@ def find_origin_package(allFiles):
                 fileURL = line
                 fileURL = fileURL.replace(find_package_name(line), '')
                 if pckg not in packages:
+                    allPackages.append(pckg.replace("b'",""))
                     packages[pckg] = []
                     packages[pckg].append(fileURL)
                 else:
@@ -350,9 +362,9 @@ def check_for_modified_files(packageList):
 
     found = str(filesFound) + " Modified files found"
     if filesFound > 0:
-        add_diffs_2_sphinx(diffFiles)
+        add_diffs_2_html(diffFiles)
     else:
-        add_diffs_2_sphinx([])
+        add_diffs_2_html([])
     print_sign(found)
 
     # Adding amount of files to summary
@@ -382,136 +394,84 @@ def create_diff(files):
         print("Error in checking diff!: ", Exception)
 
 
-def add_diffs_2_sphinx(files):
-    """Adds the changed file to the report"""
-    print("adding files 2 sphinx")
+def create_html_page(name,content,links=False, warning = "", title=""):
+    """Creates a standard html file with a list of some sort"""
+    print_sign("Creating HTML page")
     lines = []
-    with open('baseFiles/changedFiles.rst.base', 'r') as file:
+    with open('baseFiles/Base.html.base', 'r') as file:
         for g in file:
             lines.append(g)
-        lines.append("\n")
+        lines.append("<br>")
+        if len(content) == 0:
+            lines.append("<br>")
+            lines.append("<h2>No files found!</h2>")
+        title = "<h1>" + title + "</h1>"
+        lines.append(title)
+        for f in content:
+            lines.append("<br>")
+            if links:
+                lines.append("    <a link href='../ReferenceFiles" + f + "'>" + f + "<a/><br>")
+            else:
+                lines.append(f)
+
+        htmlFilename = "html/" + name + ".html"
+        with open(htmlFilename, 'w') as file:
+            file.writelines(lines)
+
+
+def add_diffs_2_html(files):
+    """Adds the changed file to the report"""
+    print("adding diff links to the HTML")
+    with open('baseFiles/Base.html.base', 'r') as file:
+        lines = []
+        for g in file:
+            lines.append(g)
+        lines.append("<br>")
+        lines.append("<h1>All found modified files</h1>")
         for f in files:
-            lines.append("\n")
-            linkName = "`" + f + "`_."
-            lines.append(linkName)
-            lines.append("\n\n")
-            linkLine = ".. _" + f + ": ../../ReferenceFiles/" + f + ".diff.html"
+
+            lines.append("<br>")
+            linkLine = "<a link href='../ReferenceFiles/" + f + ".diff.html'>" + f + "</a>"
             lines.append(linkLine)
             pass
-        lines.append("\n")
-        lines.append("======================================")
-        with open('source/changedFiles.rst', 'w') as file:
+        lines.append("<br>")
+        with open('html/changedFiles.html', 'w') as file:
             file.writelines(lines)
-        pass
-    pass
 
+def create_all_pages():
+    """Calls the create_html_page() function multiple times"""
+    print("Creating files")
 
-def create_non_package_files():
-    """List all files without a reference"""
-    print_sign("Creating_non_package_files")
-    global nonPackagedFiles
-    print(nonPackagedFiles)
-    lines = []
-    with open('baseFiles/nonPackageFiles.rst.base', 'r') as file:
-        for g in file:
-            lines.append(g)
-        lines.append("\n")
-        for f in nonPackagedFiles:
-            lines.append("\n")
-            lines.append("    <a link href='../../ReferenceFiles" + f + "'>" + f + "<a/><br>")
-            pass
-        print(lines)
-        lines.append("======================================")
-        with open('source/nonPackageFiles.rst', 'w') as file:
-            file.writelines(lines)
-        pass
+    global allUnchangedFiles
+    allUnchangedFiles.sort()
+    create_html_page(name="unchangedFiles", content=allUnchangedFiles, links=True,title="All unchanged files")
 
-    pass
-
-
-def create_all_files():
-    """Create a list of all files in Sphinx"""
-    print_sign("Creating_all_files")
-    global allConfigFiles
-    allConfigFiles.sort()
-    lines = []
-    with open('baseFiles/allConfigFiles.rst.base', 'r') as file:
-        for g in file:
-            lines.append(g)
-        lines.append("\n")
-        if len(allConfigFiles) == 0:
-            lines.append("\n")
-            lines.append("No config files found!")
-        for f in allConfigFiles:
-            lines.append("\n")
-            lines.append(str(" - " + f))
-            #lines.append("    <a link href='../../ReferenceFiles" + f + "'>" + f + "<a/><br>")
-            pass
-        with open('source/allConfigFiles.rst', 'w') as file:
-            file.writelines(lines)
-        pass
-
-    pass
-
-
-def create_all_orphan_files():
-    """Create a list of all files in Sphinx"""
-    print_sign("Creating all orphan files")
     global allOrphanFiles
     allOrphanFiles.sort()
-    lines = []
-    with open('baseFiles/allOrphanFiles.rst.base', 'r') as file:
-        for g in file:
-            lines.append(g)
-        lines.append("\n")
-        if len(allOrphanFiles) == 0:
-            lines.append("\n")
-            lines.append("No orphan files found!")
-        for f in allOrphanFiles:
-            lines.append("\n")
-            lines.append(str(" - " + f))
-            #lines.append("    <a link href='../../ReferenceFiles" + f + "'>" + f + "<a/><br>")
-            pass
+    create_html_page(name="orphanFiles", content=allOrphanFiles, links=False,title="All orphan files")
 
-        with open('source/allOrphanFiles.rst', 'w') as file:
-            file.writelines(lines)
-        pass
+    global allPackages
+    allPackages.sort()
+    create_html_page("allPackages",allPackages, False)
+    create_html_page(name="allPackages", content=allPackages, links=False,title="All found/scanned packages")
 
-    pass
+    global allConfigFiles
+    allConfigFiles.sort()
+    create_html_page("allConfigFiles",allPackages, False)
+    create_html_page(name="allConfigFiles", content=allConfigFiles, links=False,title="All found config files")
 
-
-def create_all_unchanged_files():
-    """Create a list of all unchanged files in Sphinx"""
-    print_sign("Creating all unchanged files")
-    global allUnchangedFiles
-    print(allUnchangedFiles)
-    allUnchangedFiles.sort()
-    lines = []
-    with open('baseFiles/allUnchangedFiles.rst.base', 'r') as file:
-        for g in file:
-            lines.append(g)
-        lines.append("\n")
-        if len(allUnchangedFiles) == 0:
-            lines.append("\n")
-            lines.append("No orphan files found!")
-        for f in allUnchangedFiles:
-            lines.append("\n")
-            lines.append("    <a link href='../../ReferenceFiles" + f + "'>" + f + "<a/><br>")
-            pass
-
-        with open('source/allUnchangedFiles.rst', 'w') as file:
-            file.writelines(lines)
-        pass
-
-    pass
+    summary = create_summary()
+    print(type(summary))
+    create_html_page("index", summary, False)
 
 
 def create_summary():
-    """Creates the summary for sphinx"""
+    """Creates the summary for the report"""
     global allOrphanFiles
     global allUnchangedFiles
     global allConfigFiles
     print_sign("Creating summary")
+    filedata = []
     with open('baseFiles/Summary.html.base', 'r') as file:
         filedata = file.read()
         filedata = filedata.replace('[scannedPackages]', str(summary["scannedPackages"]))
@@ -521,39 +481,16 @@ def create_summary():
         filedata = filedata.replace('[newFiles]', str(summary["newFiles"]))
         filedata = filedata.replace('[orphanFiles]', str(len(allOrphanFiles)))
         filedata = filedata.replace('[configFiles] ', str(len(allConfigFiles)))
-
-    with open('source/Summary.html', 'w') as file:
-        file.write(filedata)
-    pass
-
-
-def build_sphinx():
-    """Building sphinx
-    and move files making the downloadble
-    """
-    print_sign("Building sphinx")
-    cmd = ["make", "clean"]
-    run_command(cmd)
-    cmd = ["make", "html"]
-    run_command(cmd)
-
-    cmd = ["make", "latex"]
-    run_command(cmd)
-    cmd = ["make", "latexpdf"]
-    run_command(cmd)
-    cmd = ["cp", "build/latex/doc-overdue.pdf", "build/html"]
-    run_command(cmd)
-    cmd = ["tar", "czf", "build/html/Doc-Overdue-Html.tar.gz", "."]
-    run_command(cmd)
-
-    pass
+    listFileData = []
+    listFileData.append(filedata)
+    return listFileData
 
 
 def show_info():
     """Show information after the script is done"""
     print("#" * 40)
     print("Doc-Overdue scan complete!")
-    print("Your report is available under build/html")
+    print("Your report is available under html")
     print("The report is also available as a PDF and epub")
     print("If you want to expose the report via a webserver you can do so with the command:")
     print(" python3 -m http.server  ")
@@ -589,10 +526,6 @@ applicationFiles = fetch_package_files(installedPackages)
 
 #create_folders(etcFiles)
 check_for_modified_files(etcFiles)
-create_summary()
-create_non_package_files()
-create_all_files()
-create_all_unchanged_files()
-create_all_orphan_files()
-build_sphinx()
+
+create_all_pages()
 show_info()

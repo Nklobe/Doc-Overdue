@@ -4,7 +4,7 @@
 
 A Bachelor Degree thesis project:
 Doc-Overdue scans your server and compiles a report of what is installed, what configuration files have been modified,  and what those modifications are. 
-The script is tested and built for Ubuntu 20.04 ATM
+The script is tested and built for Ubuntu 20.10 ATM
 
 ## Features
 
@@ -27,24 +27,11 @@ Requirements for the script to work:
 
 + [Python3](https://facebook.github.io/react/)
 
-+ [Sphinx](https://facebook.github.io/react/)
-
-+ PIP 
-
-+ Make
-
 + An internet connection
 
 
 
 ## Installation or Getting Started
-
-**Download and install Sphinx and MAKE with**
-
-    sudo apt install make
-    sudo apt install python3-pip
-    pip3 install -U sphinx
-
 
 **Clone the repository and start Doc-Overdue**
 
@@ -75,15 +62,11 @@ by executing this command
 
          python3 -m http.server  
 
-Access the website with [Computers IP]:8000/build/html/index.html  
+Access the website with [Computers IP]:8000/html/index.html  
   
 OBS! The web server MUST be started in the root of the project AKA the Doc-Overdue folder  
 This is to guarantee that all needed files are included! OBS!  
   
-There is a compressed version of the report "/Doc-Overdue/build/html/Doc-Overdue-Html.tar.gz"    
-This can be moved/downloaded in case you can't view the site or if you want it for documentation.     
-This file is also downloadable under the section "Downloadable version" on the Sphinx generated site
-
 
 ## Reference
 
