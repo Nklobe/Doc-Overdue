@@ -29,15 +29,22 @@ Requirements for the script to work:
 
 + [Sphinx](https://facebook.github.io/react/)
 
++ PIP 
+
++ Make
+
 + An internet connection
 
 
 
 ## Installation or Getting Started
 
-**Download and install Sphinx with**
+**Download and install Sphinx and MAKE with**
 
-    sudo apt install python3-sphinx
+    sudo apt install make
+    sudo apt install python3-pip
+    pip3 install -U sphinx
+
 
 **Clone the repository and start Doc-Overdue**
 
