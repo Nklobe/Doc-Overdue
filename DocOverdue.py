@@ -11,10 +11,11 @@ import sys
 import filecmp
 import difflib
 import re
+import socket
 
 
 debugging = True  # show more info
-shortrun = False  # only scan 100 files as a small test
+shortrun = True  # only scan 100 files as a small test
 
 
 largeScan = False  # Scans ALL packages on your system finding files. OBS! SLOW [Not implemented]
@@ -152,7 +153,7 @@ def find_origin_package(allFiles):
         print("File: " + file)
         #Sort away unwanted files
         #Checks for certificats
-        if ".pem" in file or ".0" in file:
+        if ".pem" in file or ".0" in file or "crt" in file:
             print("Cert found!")
             continue
         #Check if its a folder
@@ -401,6 +402,10 @@ def create_html_page(name,content,links=False, warning = "", title=""):
     with open('baseFiles/Base.html.base', 'r') as file:
         for g in file:
             lines.append(g)
+        host = socket.gethostname()
+        hostname = "<center><b> %s <b> </center><hr>" % (host)
+        lines.append(hostname)
+
         lines.append("<br>")
         if len(content) == 0:
             lines.append("<br>")
@@ -426,6 +431,9 @@ def add_diffs_2_html(files):
         lines = []
         for g in file:
             lines.append(g)
+        host = socket.gethostname()
+        hostname = "<center><b> %s <b> </center><hr>" % (host)
+        lines.append(hostname)
         lines.append("<br>")
         lines.append("<h1>All found modified files</h1>")
         for f in files:
@@ -488,13 +496,20 @@ def create_summary():
 
 def show_info():
     """Show information after the script is done"""
-    print("#" * 40)
+    print("-:Your IP config:-")
+    ip = Popen(["ip","a"])
+    ip.communicate()
+    print("_-‾-" * 25)
+    print("‾-_-" * 25)
     print("Doc-Overdue scan complete!")
     print("Your report is available under html")
     print("The report is also available as a PDF and epub")
     print("If you want to expose the report via a webserver you can do so with the command:")
     print(" python3 -m http.server  ")
-    print("#" * 40)
+    print("This will make your report available at http://[yourIP]:8000/html")
+    print("TIP! Your ip config has been printed above ^")
+    print("_-‾-" * 25)
+    print("‾-_-" * 25)
     pass
 
 
