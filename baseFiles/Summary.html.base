@@ -5,9 +5,12 @@ Your system has been scanned with Doc-Overdue!<br>
 ==============================================================<br>
 Scanned packages:<font color="green"> <b>  <a link href="allPackages.html"> [scannedPackages] </a> <br></b> </font>
 Found Config files:<font color="green"><b> <a link href="allConfigFiles.html">  [configFiles] </a> </b> <br></font>
-Modified config files:<b> <font color="blue"> <a link href="changedFiles.html">  [modifiedFiles] </a> </b> <br></font>
 Unmodified config files:<b> <font color="orange"> <a link href="unchangedFiles.html"> [unmodifiedFiles] </a> </b> <br></font>
 Orphan files:<b><font color="red"> <a link href="orphanFiles.html"> [orphanFiles] </a> </b> <br></font>
+Unknown Files:<b><font color="red"> <a link href="NewFiles.html"> [unknownFiles] </a> </b> <br></font>
+<br>
+Modified config files:<b> <font color="blue"> <a link href="changedFiles.html">  [modifiedFiles] </a> </b> <br></font>
 ==============================================================<br>
 </h2>
+
 </center>

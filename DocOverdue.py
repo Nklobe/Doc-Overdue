@@ -14,8 +14,8 @@ import re
 import socket
 
 
-debugging = True  # show more info
-shortrun = True  # only scan 100 files as a small test
+debugging = False  # show more info
+shortrun = False  # only scan 100 files as a small test
 
 
 largeScan = False  # Scans ALL packages on your system finding files. OBS! SLOW [Not implemented]
@@ -27,7 +27,9 @@ nonPackagedFiles = []  # files not found in packages
 allUnchangedFiles = []  # All unchanged config files found
 allConfigFiles = []  # All config files found
 allOrphanFiles = []  # All orphan files found
-allPackages = []
+allPackages = []  # All packages found
+allUnknownFiles = []  # All orphan files minus known files in the file standardPackages
+
 
 print("#" * 40)
 print("Starting Doc-Overdue")
@@ -48,7 +50,10 @@ def first_run():
     run_command(cmd)
     cmd = ["mkdir", "-p", "ReferenceFiles/etc"]
     run_command(cmd)
-
+    cmd = ["rm", "errorLog.txt"]
+    run_command(cmd)
+    cmd = ["touch", "errorLog.txt"]
+    run_command(cmd)
 
 def run_command(cmd, cwd=".", outputCap=True, shell=False, captError=False):
     """Runs command and trims the output"""
@@ -61,7 +66,7 @@ def run_command(cmd, cwd=".", outputCap=True, shell=False, captError=False):
     outCMD = rawCMD.communicate()
 
     if captError:  # if the function was called with captError=True
-        cmdList = [True,""]
+        cmdList = [True, ""]
         if rawCMD.returncode:
             print("Command Failed")
             cmdList[0] = True
@@ -79,6 +84,12 @@ def run_command(cmd, cwd=".", outputCap=True, shell=False, captError=False):
         outCMD = outCMD[0].decode("utf-8")
         outCMD = outCMD.split("\n")
 
+    if rawCMD.returncode:
+        errors = []
+        errors.append(cmd)
+        errors.append(cmdList[1])
+        #if the returncode is 1 AKA strERR
+        write_errorlog(errors)
 
     #conversionList = str(outCMD[0]).split('\\n')
     #print(outCMD)
@@ -106,6 +117,16 @@ def run_command(cmd, cwd=".", outputCap=True, shell=False, captError=False):
         return 0"""
 
 
+def write_errorlog(msg):
+    """Write error logs to errorLogFile"""
+    print("Error!")
+    with open('errorLog.txt', 'a') as file:
+        for line in msg:
+            file.writelines(line)
+        pass
+    pass
+
+
 def parse_output(byteList):
     """Converts bytes to UTF strings"""
     byteList = byteList.stdout.splitlines()
@@ -130,11 +151,11 @@ def fetch_installed_packages():
     """Gets all installed packages via dpkg"""
     print_sign("Fetching installed packages")
     cmd = ["dpkg-query", "-f", "'${Package}\n'", "-W"]
+    run_command(cmd, cwd=".", outputCap=True, shell=False, captError=False)
     applicationList = run_command(cmd)
     print("Installed packages: ", len(applicationList))
-    print("")
-    return applicationList
-
+    #return applicationList
+    return applicationList[0::10]
 
 def find_origin_package(allFiles):
     """Finds all packages related to files
@@ -151,12 +172,12 @@ def find_origin_package(allFiles):
     current = 0
     for file in allFiles:
         print("File: " + file)
-        #Sort away unwanted files
-        #Checks for certificats
+        # Sort away unwanted files
+        # Checks for certificats
         if ".pem" in file or ".0" in file or "crt" in file:
             print("Cert found!")
             continue
-        #Check if its a folder
+        # Check if its a folder
         if os.path.isdir(file):
             print(file + " Is directory!")
             continue
@@ -171,7 +192,6 @@ def find_origin_package(allFiles):
                     print("No Files found!")
                     break
                 print("Packages Found")
-                print(line)
                 pckg = find_package_name((line), False)
                 fileURL = line
                 fileURL = fileURL.replace(find_package_name(line), '')
@@ -195,7 +215,7 @@ def fetch_package_files(packageList):
     current = 0
     for p in packageList:
         cmd = ["dpkg", "-S", p]
-        fileList[p] = run_command(cmd)
+        fileList[p] = run_command(cmd, cwd=".", outputCap=True, shell=False, captError=False)
         print(current, "/", amount, "Packages scanned: ", p)
         current += 1
 
@@ -210,9 +230,9 @@ def find_package_name(txt, colon=True):
     """Extracts the package name from found strings ex: package: /etc/conf.conf"""
     if len(txt) == 0:
         txt = " "
-
+    print(txt)
     pckName = re.search("^\S+\s", txt)
-    if pckName == None:
+    if pckName is None:
         pckName = ""
     else:
         pckName = pckName.group(0)
@@ -232,22 +252,25 @@ def parse_config_files(fileDict):
 
     print_sign("Parsing config files")
     etcFiles = {}
-    amount = len(fileDict.items())  # Amount of packages
+    print(fileDict[0])
+    #amount = len(fileDict.items())  # Amount of packages
+    amount = len(fileDict)  # Amount of packages
     current = 0
-    for f in fileDict.items():  # gets through the items
+    #for f in fileDict.items():  # gets through the items
+    for fileURL in fileDict:  # gets through the items
         fileList = []
-        for fileURL in f[1]:  # looping through the file list
-            scannedFilesCount += 1
-            if "/etc/" in fileURL:
-                configFilesCount += 1
-                allConfigFiles.append(fileURL)
-                print(fileURL, " OK")
-                pckName = find_package_name(fileURL)
-                fileURL = fileURL.replace(pckName, '')  # makes it a pure URL
-                if os.path.isfile(fileURL):  # ignores directories
-                    fileList.append(fileURL)
-                else:
-                    print(fileURL, " Is a folder!")
+        #for fileURL in f[1]:  # looping through the file list
+        scannedFilesCount += 1
+        if "/etc/" in fileURL:
+            configFilesCount += 1
+            allConfigFiles.append(fileURL)
+            print(fileURL, " OK")
+            pckName = find_package_name(fileURL)
+            fileURL = fileURL.replace(pckName, '')  # makes it a pure URL
+            if os.path.isfile(fileURL):  # ignores directories
+                fileList.append(fileURL)
+            else:
+                print(fileURL, " Is a folder!")
             etcFiles[f[0]] = fileList
     print(etcFiles)
 
@@ -395,7 +418,7 @@ def create_diff(files):
         print("Error in checking diff!: ", Exception)
 
 
-def create_html_page(name,content,links=False, warning = "", title=""):
+def create_html_page(name,content,  warning,links=False, title=""):
     """Creates a standard html file with a list of some sort"""
     print_sign("Creating HTML page")
     lines = []
@@ -405,7 +428,8 @@ def create_html_page(name,content,links=False, warning = "", title=""):
         host = socket.gethostname()
         hostname = "<center><b> %s <b> </center><hr>" % (host)
         lines.append(hostname)
-
+        lines.append("<br>")
+        lines.append(warning)
         lines.append("<br>")
         if len(content) == 0:
             lines.append("<br>")
@@ -434,6 +458,7 @@ def add_diffs_2_html(files):
         host = socket.gethostname()
         hostname = "<center><b> %s <b> </center><hr>" % (host)
         lines.append(hostname)
+        lines.append("<br>Config files found with a comparable one in a package, Click the link to show a DIFF comparison")
         lines.append("<br>")
         lines.append("<h1>All found modified files</h1>")
         for f in files:
@@ -446,31 +471,70 @@ def add_diffs_2_html(files):
         with open('html/changedFiles.html', 'w') as file:
             file.writelines(lines)
 
+
+def create_unknown_files():
+    """Removes known packages from the Orphan files"""
+    print_sign("Creates Unknown Files")
+    global allOrphanFiles
+    global allUnknownFiles
+    standardPackages = []
+    tempList = []
+    with open('standardPackages', 'r') as file:
+        for line in file:
+            print(line)
+            line = line.rstrip()
+            standardPackages.append(line)
+
+    print("allOrphanFiles")
+    tempList = allOrphanFiles
+
+    for f in standardPackages:
+        if f in allOrphanFiles:
+            tempList.remove(f)
+            print(f, " Removed from list")
+            print(len(tempList))
+    if allOrphanFiles == tempList:
+        print("BAJS")
+    else:
+        print("Kiss")
+        allUnknownFiles = tempList
+
+    warning = "All files remaining after known Debian/Ubuntu files are removed from the Orphan Files"
+    create_html_page("NewFiles",allUnknownFiles,links=False, warning = warning, title="Unknown/New Files")
+    pass
+
+
 def create_all_pages():
     """Calls the create_html_page() function multiple times"""
     print("Creating files")
 
     global allUnchangedFiles
     allUnchangedFiles.sort()
-    create_html_page(name="unchangedFiles", content=allUnchangedFiles, links=True,title="All unchanged files")
+    warning = "Files found and compared with no differences found"
+    create_html_page(name="unchangedFiles", content=allUnchangedFiles, links=True,title="All unchanged files", warning = warning)
 
     global allOrphanFiles
     allOrphanFiles.sort()
-    create_html_page(name="orphanFiles", content=allOrphanFiles, links=False,title="All orphan files")
+    warning = "Files found under /etc with no related package"
+    create_html_page(name="orphanFiles", content=allOrphanFiles, links=False,title="All orphan files", warning = warning)
 
     global allPackages
     allPackages.sort()
-    create_html_page("allPackages",allPackages, False)
-    create_html_page(name="allPackages", content=allPackages, links=False,title="All found/scanned packages")
+    #create_html_page("allPackages",allPackages, False)
+    warning = "All packages found liked to conf files under /etc"
+    create_html_page(name="allPackages", content=allPackages, links=False,title="All found/scanned packages", warning = warning)
 
     global allConfigFiles
     allConfigFiles.sort()
-    create_html_page("allConfigFiles",allPackages, False)
-    create_html_page(name="allConfigFiles", content=allConfigFiles, links=False,title="All found config files")
+    #create_html_page("allConfigFiles",allPackages, False)
+    warning = "All config files found under /etc"
+    create_html_page(name="allConfigFiles", content=allConfigFiles, links=False,title="All found config files", warning = warning)
+
+    create_unknown_files()
 
     summary = create_summary()
     print(type(summary))
-    create_html_page("index", summary, False)
+    create_html_page(name="index", content=summary, links=False,title="", warning = "")
 
 
 def create_summary():
@@ -478,6 +542,7 @@ def create_summary():
     global allOrphanFiles
     global allUnchangedFiles
     global allConfigFiles
+    global allUnknownFiles
     print_sign("Creating summary")
     filedata = []
     with open('baseFiles/Summary.html.base', 'r') as file:
@@ -488,7 +553,8 @@ def create_summary():
         filedata = filedata.replace('[unmodifiedFiles]', str(len(allUnchangedFiles)))
         filedata = filedata.replace('[newFiles]', str(summary["newFiles"]))
         filedata = filedata.replace('[orphanFiles]', str(len(allOrphanFiles)))
-        filedata = filedata.replace('[configFiles] ', str(len(allConfigFiles)))
+        filedata = filedata.replace('[configFiles]', str(len(allConfigFiles)))
+        filedata = filedata.replace('[unknownFiles]', str(len(allUnknownFiles)))
     listFileData = []
     listFileData.append(filedata)
     return listFileData
@@ -497,7 +563,7 @@ def create_summary():
 def show_info():
     """Show information after the script is done"""
     print("-:Your IP config:-")
-    ip = Popen(["ip","a"])
+    ip = Popen(["ip", "a"])
     ip.communicate()
     print("_-‾-" * 25)
     print("‾-_-" * 25)
@@ -507,7 +573,7 @@ def show_info():
     print("If you want to expose the report via a webserver you can do so with the command:")
     print(" python3 -m http.server  ")
     print("This will make your report available at http://[yourIP]:8000/html")
-    print("TIP! Your ip config has been printed above ^")
+    print("TIP! Your ip config has been printed above!")
     print("_-‾-" * 25)
     print("‾-_-" * 25)
     pass
@@ -516,25 +582,23 @@ def show_info():
 # Main Runtime
 first_run()
 
-foundEtcFiles = scan_files_etc()
-
-#installedPackages = fetch_installed_packages()
 installedPackages = []
 
-#for l in range(10):
-#    shortList.append(installedPackages[l+200])
+if largeScan:
+    installedPackages = fetch_installed_packages()
+    etcFiles = parse_config_files(installedPackages)
 
-if shortrun:
-    shortList = []
-    for L in range(50):
-        shortList.append(foundEtcFiles[L])
-
-    etcFiles = find_origin_package(shortList)
 else:
-    etcFiles = find_origin_package(foundEtcFiles)
+    foundEtcFiles = scan_files_etc()
+    if shortrun:
+        shortList = []
+        for L in range(50):
+            shortList.append(foundEtcFiles[L])
+        etcFiles = find_origin_package(shortList)
+    else:
+        etcFiles = find_origin_package(foundEtcFiles)
 
 download_package(etcFiles)
-
 applicationFiles = fetch_package_files(installedPackages)
 
 #etcFiles = parse_config_files(applicationFiles)
