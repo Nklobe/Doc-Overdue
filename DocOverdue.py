@@ -429,6 +429,7 @@ def file_in_standardFiles(confFile):
             line = line.rstrip()
             standardPackages.append(line)
 
+
     if confFile in standardPackages:
         print(confFile, " Found in standardPackages")
         result = True
@@ -686,7 +687,7 @@ def create_all_pages():
     warning = "All config files found under /etc"
     create_html_page(name="allConfigFiles", content=allConfigFiles, links=False,title="All found config files", warning = warning)
 
-    create_unknown_files()
+    #create_unknown_files()
 
     #test_aptfile()
 
