@@ -77,8 +77,13 @@ def run_command(cmd, cwd=".", outputCap=True, shell=False, captError=False):
         else:
             print("Command Successfull")
             cmdList[0] = False
-            cmdList[1] = outCMD[0].decode('utf-8')
-            cmdList[1] = str(outCMD[0]).split("\n")
+            try:
+                cmdList[1] = outCMD[0].decode('utf-8')
+                cmdList[1] = str(outCMD[0]).split("\n")
+            except Exception as a:
+                print("Decode Error!")
+                write_errorlog([cmdList])
+                pass
             print(cmdList[1])
         outCMD = cmdList
     else:
@@ -714,6 +719,8 @@ def find_mention_in_dpkg():
     for o in allUnknownFiles:
         #print(o)
         #cmd = ["grep " "-r", o, "."]
+        if o == "":
+            continue
         cmd = ["grep", "-r", o, "."]
         rawCMD = run_command(cmd, cwd="/var/lib/dpkg/info/", outputCap=True, shell=True, captError=True)
         if rawCMD[0]:
