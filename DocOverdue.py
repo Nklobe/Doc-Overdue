@@ -12,6 +12,7 @@ import filecmp
 import difflib
 import re
 import socket
+from pathlib import Path
 
 
 debugging = False  # show more info
@@ -64,7 +65,7 @@ def run_command(cmd, cwd=".", outputCap=True, shell=False, captError=False):
     print("Waiting for command ", str(cmd), " to complete")
     #outCMD = rawCMD.stdout.splitlines()
     outCMD = rawCMD.communicate()
-
+    errorLogCMD = outCMD
     if captError:  # if the function was called with captError=True
         cmdList = [True, ""]
         if rawCMD.returncode:
@@ -85,10 +86,13 @@ def run_command(cmd, cwd=".", outputCap=True, shell=False, captError=False):
         outCMD = outCMD.split("\n")
 
     if rawCMD.returncode:
+        #if the returncode is 1 AKA strERR
         errors = []
         errors.append(cmd)
-        errors.append(cmdList[1])
-        #if the returncode is 1 AKA strERR
+        print(errorLogCMD)
+        errors.append(errorLogCMD[0])
+        errors.append(errorLogCMD[1])
+        errors.append("\n")
         write_errorlog(errors)
 
     #conversionList = str(outCMD[0]).split('\\n')
@@ -119,10 +123,10 @@ def run_command(cmd, cwd=".", outputCap=True, shell=False, captError=False):
 
 def write_errorlog(msg):
     """Write error logs to errorLogFile"""
-    print("Error!")
+    print("Error written to errorLog!")
     with open('errorLog.txt', 'a') as file:
         for line in msg:
-            file.writelines(line)
+            file.writelines(str(line))
         pass
     pass
 
@@ -196,7 +200,7 @@ def find_origin_package(allFiles):
                 fileURL = line
                 fileURL = fileURL.replace(find_package_name(line), '')
                 if pckg not in packages:
-                    allPackages.append(pckg.replace("b'",""))
+                    allPackages.append(pckg.replace("b'", ""))
                     packages[pckg] = []
                     packages[pckg].append(fileURL)
                 else:
@@ -230,7 +234,6 @@ def find_package_name(txt, colon=True):
     """Extracts the package name from found strings ex: package: /etc/conf.conf"""
     if len(txt) == 0:
         txt = " "
-    print(txt)
     pckName = re.search("^\S+\s", txt)
     if pckName is None:
         pckName = ""
@@ -304,10 +307,12 @@ def download_package(packages):
     amount = len(packages.items())
     current = 0
     for p in packages.items():
-
         print("Downloading package ", current, "/", amount, p[0])
         try:
-            cmd = ["apt", "download", p[0]]
+            package = p[0]
+            package = package.replace("b'", "")
+            #cmd = ["apt", "download", p[0]]
+            cmd = ["apt", "download", package]
             applicationList = run_command(cmd, "PackagesTMP", False)
             extract_files(p[0])
         except Exception:
@@ -322,7 +327,6 @@ def download_package(packages):
 def extract_files(package):  # No list, just one package per time
     """Extracting and moving the files to the correct place"""
     print_sign("Extracting files")
-
     fileName = run_command("ls", cwd="PackagesTMP")  # UGLY solution \
     print("FileNAME: ", fileName)
     # runs ls and uses the first result.
@@ -336,8 +340,11 @@ def extract_files(package):  # No list, just one package per time
     # Fetching all files and folders for removal
     fileName = run_command("ls", "PackagesTMP")
     for f in fileName:
-        cmd = ["rm", "-rv",  f]
-        run_command(cmd, cwd="PackagesTMP")
+        if len(f) == 0:
+            continue
+        else:
+            cmd = ["rm", "-rvf",  f]
+            run_command(cmd, cwd="PackagesTMP")
 
 
 def print_sign(label):
@@ -361,7 +368,6 @@ def check_for_modified_files(packageList):
             fileURL = fileURL.replace('\'', "")
             referenceFile = "ReferenceFiles" + fileURL
             print(referenceFile, " : ", fileURL)
-
             try:
                 comparison = filecmp.cmp(fileURL, referenceFile)
                 if comparison is False:  # if difference
@@ -395,6 +401,153 @@ def check_for_modified_files(packageList):
     summary["modifiedFiles"] = filesFound
 
 
+def file_in_dpkgInfo(confFile):
+    """Is confFile mentioned in /var/lib/dpkg/info/"""
+    cmd = ["grep", "-r", confFile, "."]
+    rawCMD = run_command(cmd, cwd="/var/lib/dpkg/info/", outputCap=True, shell=True, captError=True)
+    if rawCMD[0]:
+        print(confFile, " is still unknown!")
+        result = False
+    else:
+        print("Occurence of :", confFile, " Found!")
+        result = True
+    return result
+
+def file_in_standardFiles(confFile):
+    """Removes known packages from the Orphan files"""
+    result = True
+    standardPackages = []
+    tempList = []
+    with open('standardPackages', 'r') as file:
+        for line in file:
+            #print(line)
+            line = line.rstrip()
+            standardPackages.append(line)
+
+    if confFile in standardPackages:
+        print(confFile, " Found in standardPackages")
+        result = True
+    else:
+        print(confFile, " Not Found")
+        result = False
+    return result
+
+
+def file_ownedByRoot(confFile):
+    """Checks if file is owned by Root or not"""
+    try:
+        path = Path(confFile)
+        owner = path.owner()
+        group = path.group()
+    except Exception as e:
+        print("Path Failed!")
+        write_errorlog([str(e)])
+        return False
+    if owner == "root" and group == "root":
+        result = True
+        print(confFile, "Is owned by root")
+    else:
+        result = False
+    return result
+
+
+def file_createdPostInstallation(confFile, systemDate):
+    """Checks if the file is created on a date after the inistial
+    installation of the system"""
+    # stat --format='%w' /etc/papersize
+    #print(len(confFile))
+    #print(confFile)
+
+    #cmd = ["stat", "--format='%w'", confFile]
+    #cmd = ["stat", "/etc/papersize", "|" "grep", "'Birth'", "|", "sed", "'s/Birth: //g'", "|", "cut -b 2-11"]
+    cmd = ["stat", "--format='%w'", confFile]
+    rawCMD = run_command(cmd, cwd="/usr/bin/", outputCap=True, shell=True, captError=True)
+    if rawCMD[0]:
+        print(confFile, " birth date could NOT be found")
+        result = False
+    else:
+        print("Birth date of :", confFile, " Found!")
+        birthDate = rawCMD[1][0]
+        print("¤¤¤¤¤¤")
+        birthDate = birthDate[3:13]
+        print(birthDate, systemDate)
+        if str(systemDate) == str(birthDate):
+            print("Same")
+            result = True
+        else:
+            print("Diff")
+            result = False
+
+    return result
+
+
+def create_file_detections():
+    """Creates a matrix of different tests in one page"""
+    print_sign("Creating File detection")
+    global allOrphanFiles
+    detectionDict = {}
+    resultList = []
+    htmlList = []
+    cmd = ["stat", "--format='%w'", "/"]
+    rawCMD = run_command(cmd, cwd="/usr/bin/", outputCap=True, shell=True, captError=True)
+    birthDate = rawCMD[1][0]
+    birthDate = birthDate[3:13]
+
+    for o in allOrphanFiles:  # Do all tests and put them in a dict
+        resultList = [file_in_dpkgInfo(o), file_in_standardFiles(o), file_ownedByRoot(o), file_createdPostInstallation(o, birthDate)]
+        detectionDict[o] = [resultList]
+
+    #print(detectionDict)
+    create_html_list(detectionDict)
+
+
+def create_html_list(resultDict):
+    htmlList = []
+    htmlList.append("A matrix of all orphan files, <br>")
+    htmlList.append("These test can help in finding outliers, the more a file fails tests the more certain you can be <br>")
+    htmlList.append("that the file has been created by an administrator <br>")
+    htmlList.append("<br><b>In DPKG info:</b> Searches through all files under /var/lib/dpkg/info/ for mention of the file<br>")
+    htmlList.append("<b>In Standard Files:</b> Uses the file 'standardPackages' that contains packages that exist on newly installed debian/ubuntu systems<br>")
+    htmlList.append("<b>Owned by root:root :</b> Sees if the file is owned by root, this is the standard for most auto created config files<br>")
+    htmlList.append("<b>Created post installation date:</b> Check if the file was created on the same day as the system was installed<br><br>")
+    htmlList.append("<style>table, th, td {border:1px solid black; }")
+    #htmlList.append("th:nth-child(even),td:nth-child(even) {background-color: #D6EEEE;}</style>")
+    htmlList.append("</style>")
+    htmlList.append("<table style='width:100%' > <tr> ")
+    htmlList.append("<th>File</th>")
+    htmlList.append("<th>In Dpkg info</th>")
+    htmlList.append("<th>In Standardfiles</th>")
+    htmlList.append("<th>Owned By root:root</th>")
+    htmlList.append("<th>Created on installation date</th>")
+    htmlList.append("</tr>")
+
+    for r in resultDict.keys():
+        print(resultDict[r][0][0])
+        htmlList.append("<tr>")
+        resultString = "<td>" + r + "</td>"
+        htmlList.append(resultString)
+        resultString = cell_color(resultDict[r][0][0]) + str(resultDict[r][0][0]) + "</td>"
+        htmlList.append(resultString)
+        resultString = cell_color(resultDict[r][0][1]) + str(resultDict[r][0][1]) + "</td>"
+        htmlList.append(resultString)
+        resultString = cell_color(resultDict[r][0][2]) + str(resultDict[r][0][2]) + "</td>"
+        htmlList.append(resultString)
+        resultString = cell_color(resultDict[r][0][3]) + str(resultDict[r][0][3]) + "</td>"
+        htmlList.append(resultString)
+        htmlList.append("<tr>")
+    warning = ""
+    create_html_page(name="file_tests", content=htmlList, warning="", links=False, title="File Tests", br=False)
+    pass
+
+
+def cell_color(question):
+    if question:
+        return "<td bgcolor='Green'>"
+    else:
+        return "<td bgcolor='Red'>"
+    pass
+
+
 def create_diff(files):
     """Creates the Diff summaries"""
     print_sign("Creating Diffs")
@@ -418,7 +571,7 @@ def create_diff(files):
         print("Error in checking diff!: ", Exception)
 
 
-def create_html_page(name,content,  warning,links=False, title=""):
+def create_html_page(name,content,  warning,links=False, title="", br=True):
     """Creates a standard html file with a list of some sort"""
     print_sign("Creating HTML page")
     lines = []
@@ -426,7 +579,7 @@ def create_html_page(name,content,  warning,links=False, title=""):
         for g in file:
             lines.append(g)
         host = socket.gethostname()
-        hostname = "<center><b> %s <b> </center><hr>" % (host)
+        hostname = "<center><b> %s </b> </center><hr>" % (host)
         lines.append(hostname)
         lines.append("<br>")
         lines.append(warning)
@@ -437,7 +590,8 @@ def create_html_page(name,content,  warning,links=False, title=""):
         title = "<h1>" + title + "</h1>"
         lines.append(title)
         for f in content:
-            lines.append("<br>")
+            if br:
+                lines.append("<br>")
             if links:
                 lines.append("    <a link href='../ReferenceFiles" + f + "'>" + f + "<a/><br>")
             else:
@@ -462,11 +616,9 @@ def add_diffs_2_html(files):
         lines.append("<br>")
         lines.append("<h1>All found modified files</h1>")
         for f in files:
-
-            lines.append("<br>")
             linkLine = "<a link href='../ReferenceFiles/" + f + ".diff.html'>" + f + "</a>"
             lines.append(linkLine)
-            pass
+            lines.append("<br>")
         lines.append("<br>")
         with open('html/changedFiles.html', 'w') as file:
             file.writelines(lines)
@@ -481,7 +633,7 @@ def create_unknown_files():
     tempList = []
     with open('standardPackages', 'r') as file:
         for line in file:
-            print(line)
+            #print(line)
             line = line.rstrip()
             standardPackages.append(line)
 
@@ -494,13 +646,12 @@ def create_unknown_files():
             print(f, " Removed from list")
             print(len(tempList))
     if allOrphanFiles == tempList:
-        print("BAJS")
+        allUnknownFiles = tempList
     else:
-        print("Kiss")
         allUnknownFiles = tempList
 
     warning = "All files remaining after known Debian/Ubuntu files are removed from the Orphan Files"
-    create_html_page("NewFiles",allUnknownFiles,links=False, warning = warning, title="Unknown/New Files")
+    create_html_page("NewFiles",allUnknownFiles,links=False, warning=warning, title="Unknown/New Files")
     pass
 
 
@@ -511,7 +662,7 @@ def create_all_pages():
     global allUnchangedFiles
     allUnchangedFiles.sort()
     warning = "Files found and compared with no differences found"
-    create_html_page(name="unchangedFiles", content=allUnchangedFiles, links=True,title="All unchanged files", warning = warning)
+    create_html_page(name="unchangedFiles", content=allUnchangedFiles, links=True, title="All unchanged files", warning=warning)
 
     global allOrphanFiles
     allOrphanFiles.sort()
@@ -532,9 +683,46 @@ def create_all_pages():
 
     create_unknown_files()
 
+    #test_aptfile()
+
     summary = create_summary()
-    print(type(summary))
+
     create_html_page(name="index", content=summary, links=False,title="", warning = "")
+
+
+def test_aptfile():
+    global allPackages
+    foundFiles = []
+    for i in allPackages:
+        cmd = ["apt-file", "list", i]
+        rawCMD = run_command(cmd, cwd=".", outputCap=True, shell=False, captError=False)
+        print("Apt-File: ", rawCMD)
+        for line in rawCMD:
+            if "/etc/" in line:
+                foundFiles.append(line)
+
+    create_html_page(name="apt-file", content=foundFiles, links=False,title="Apt-file files", warning = "")
+    pass
+
+
+def find_mention_in_dpkg():
+    """Running a grep command to find occurance of files in /var/lib/dpkg/info/"""
+    print_sign("Finding mentions of orphan files in the dpkg files")
+    global allOrphanFiles
+    global allUnknownFiles
+    mentionList = []
+    for o in allUnknownFiles:
+        #print(o)
+        #cmd = ["grep " "-r", o, "."]
+        cmd = ["grep", "-r", o, "."]
+        rawCMD = run_command(cmd, cwd="/var/lib/dpkg/info/", outputCap=True, shell=True, captError=True)
+        if rawCMD[0]:
+            print(o, " is still unknown!")
+        else:
+            print("Occurence of :", o, " Found!")
+        #print(rawCMD[0])
+        #print(type(rawCMD))
+        #mentionList.append(o)
 
 
 def create_summary():
@@ -605,6 +793,7 @@ applicationFiles = fetch_package_files(installedPackages)
 
 #create_folders(etcFiles)
 check_for_modified_files(etcFiles)
-
 create_all_pages()
+create_file_detections()
+#find_mention_in_dpkg()
 show_info()
