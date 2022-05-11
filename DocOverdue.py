@@ -16,7 +16,7 @@ from pathlib import Path
 
 
 debugging = False  # show more info
-shortrun = True  # only scan 100 files as a small test
+shortrun = False  # only scan 100 files as a small test
 deletePackages = True  # Should the script delete the reference packages after
                        # use to save on disk space? NOT WORKING ATM! KEEP TRUE
 
@@ -423,9 +423,10 @@ def file_in_dpkgInfo(confFile):
         result = True
     return result
 
-def file_in_standardFiles(confFile):
+#def file_in_standardFiles(confFile):
     """Removes known packages from the Orphan files"""
-    result = True
+
+    """result = True
     standardPackages = []
     tempList = []
     with open('standardPackages', 'r') as file:
@@ -441,6 +442,39 @@ def file_in_standardFiles(confFile):
     else:
         print(confFile, " Not Found")
         result = False
+    return result """
+
+def file_in_standardFiles(confFile):
+    """Removes known packages from the Orphan files"""
+    result = ""
+    standardFiles = []
+    tempList = []
+
+    cmd = ["ls"]
+    rawCMD = run_command(cmd, cwd="StandardFiles", outputCap=True, shell=True, captError=True)
+
+    print("¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤")
+    fileList = rawCMD[1][0]
+    fileList = fileList.replace("b'", "")
+    fileList = fileList.replace("'", "")
+    fileList = fileList.split('\\n')
+    print(fileList)
+
+    for f in fileList:
+        standardFiles = []
+        fileURL = 'StandardFiles/' + f
+        if os.path.isfile(fileURL):
+            with open(fileURL, 'r') as file:
+                for line in file:
+                    line = line.rstrip()
+                    standardFiles.append(line)
+            if confFile in standardFiles:
+                print(confFile, " Found in standardFiles")
+                result = result + f + " "
+        else:
+            print("NOT A FILE")
+    if result == "":
+        result = "False"
     return result
 
 
@@ -513,9 +547,10 @@ def file_changedPostInstallation(confFile):
         changeDate = rawCMD[1][0]
         print("¤¤¤¤¤¤")
         changeDate = changeDate[3:13]
-
-    birthDateInt = int(birthDate.replace("-", ""))
-    changeDateInt = int(changeDate.replace("-", ""))
+    birthDateInt = re.sub('[^0-9]','', birthDate)
+    changeDateInt  = re.sub('[^0-9]','', changeDate)
+    #birthDateInt = int(birthDate.replace("-", ""))
+    #changeDateInt = int(changeDate.replace("-", ""))
 
     if birthDateInt == changeDateInt:
         return "True"
@@ -552,9 +587,10 @@ def create_html_list(resultDict):
     htmlList.append("These test can help in finding outliers, the more a file fails tests the more certain you can be <br>")
     htmlList.append("that the file has been created by an administrator <br>")
     htmlList.append("<br><b>In DPKG info:</b> Searches through all files under /var/lib/dpkg/info/ for mention of the file<br>")
-    htmlList.append("<b>In Standard Files:</b> Uses the file 'standardPackages' that contains packages that exist on newly installed debian/ubuntu systems<br>")
+    htmlList.append("<b>In Standard Files:</b> Uses the files under 'StandardFiles' that contains files that exist on newly installed debian/ubuntu systems,<br> if the file exists in a list, the name of that list will be printed<br>")
     htmlList.append("<b>Owned by root:root :</b> Sees if the file is owned by root, this is the standard for most auto created config files<br>")
     htmlList.append("<b>Created post installation date:</b> Check if the file was created on the same day as the system was installed<br><br>")
+    htmlList.append("<b>Unmodified since installation: </b> Checks if the file has been modified since its creation")
     htmlList.append("<style>table, th, td {border:1px solid black; }")
     #htmlList.append("th:nth-child(even),td:nth-child(even) {background-color: #D6EEEE;}</style>")
     htmlList.append("</style>")
@@ -564,7 +600,7 @@ def create_html_list(resultDict):
     htmlList.append("<th>In Standardfiles</th>")
     htmlList.append("<th>Owned By root:root</th>")
     htmlList.append("<th>Created on installation date</th>")
-    htmlList.append("<th>Unmodified since installation</th>")
+    htmlList.append("<th>Unmodified since creation</th>")
     htmlList.append("</tr>")
 
     for r in resultDict.keys():
@@ -830,7 +866,7 @@ else:
     foundEtcFiles = scan_files_etc()
     if shortrun:
         shortList = []
-        for L in range(50+500):
+        for L in range(50):
             shortList.append(foundEtcFiles[L])
         etcFiles = find_origin_package(shortList)
     else:
