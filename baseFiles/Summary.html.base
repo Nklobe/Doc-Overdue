@@ -12,6 +12,6 @@ Unknown Files:<b><font color="red"> <a link href="NewFiles.html"> [unknownFiles]
 Modified config files:<b> <font color="blue"> <a link href="changedFiles.html">  [modifiedFiles] </a> </b> <br></font>
 ==============================================================<br>
 </h2>
-<a link href="errorLog.txt">  ErrorLogs </a>
+<a link href="../errorLog.txt">  ErrorLogs </a>
 
 </center>

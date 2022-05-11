@@ -16,8 +16,9 @@ from pathlib import Path
 
 
 debugging = False  # show more info
-shortrun = False  # only scan 100 files as a small test
-
+shortrun = True  # only scan 100 files as a small test
+deletePackages = True  # Should the script delete the reference packages after
+                       # use to save on disk space? NOT WORKING ATM! KEEP TRUE
 
 largeScan = False  # Scans ALL packages on your system finding files. OBS! SLOW [Not implemented]
 
@@ -165,6 +166,7 @@ def fetch_installed_packages():
     print("Installed packages: ", len(applicationList))
     #return applicationList
     return applicationList[0::10]
+
 
 def find_origin_package(allFiles):
     """Finds all packages related to files
@@ -319,7 +321,7 @@ def download_package(packages):
             #cmd = ["apt", "download", p[0]]
             cmd = ["apt", "download", package]
             applicationList = run_command(cmd, "PackagesTMP", False)
-            extract_files(p[0])
+            extract_files(package)
         except Exception:
             print(Exception)
             print("Failed to download package!")
@@ -333,6 +335,7 @@ def extract_files(package):  # No list, just one package per time
     """Extracting and moving the files to the correct place"""
     print_sign("Extracting files")
     fileName = run_command("ls", cwd="PackagesTMP")  # UGLY solution \
+    #fileName = run_command(["ls", wildcardPackage],  cwd="PackagesTMP")  # UGLY solution \
     print("FileNAME: ", fileName)
     # runs ls and uses the first result.
     cmd = ["dpkg", "-x", fileName[0], package]
@@ -343,13 +346,15 @@ def extract_files(package):  # No list, just one package per time
     cmd = ["cp", "-rv", etc, "../ReferenceFiles"]
     run_command(cmd, "PackagesTMP")
     # Fetching all files and folders for removal
-    fileName = run_command("ls", "PackagesTMP")
+    fileName = run_command(["ls"], "PackagesTMP")
     for f in fileName:
         if len(f) == 0:
             continue
         else:
-            cmd = ["rm", "-rvf",  f]
-            run_command(cmd, cwd="PackagesTMP")
+            if deletePackages:
+                cmd = ["rm", "-rvf",  f]
+                run_command(cmd, cwd="PackagesTMP")
+            pass
 
 
 def print_sign(label):
@@ -460,12 +465,6 @@ def file_ownedByRoot(confFile):
 def file_createdPostInstallation(confFile, systemDate):
     """Checks if the file is created on a date after the inistial
     installation of the system"""
-    # stat --format='%w' /etc/papersize
-    #print(len(confFile))
-    #print(confFile)
-
-    #cmd = ["stat", "--format='%w'", confFile]
-    #cmd = ["stat", "/etc/papersize", "|" "grep", "'Birth'", "|", "sed", "'s/Birth: //g'", "|", "cut -b 2-11"]
     cmd = ["stat", "--format='%w'", confFile]
     rawCMD = run_command(cmd, cwd="/usr/bin/", outputCap=True, shell=True, captError=True)
     if rawCMD[0]:
@@ -479,12 +478,52 @@ def file_createdPostInstallation(confFile, systemDate):
         print(birthDate, systemDate)
         if str(systemDate) == str(birthDate):
             print("Same")
-            result = True
+
+            result = "True, Created:" + birthDate
         else:
             print("Diff")
-            result = False
+            result = "False, Created:" + birthDate
 
     return result
+
+
+def file_changedPostInstallation(confFile):
+    """Checks if the file is created on a date after the inistial
+    installation of the system"""
+    birthDate = ""
+    changeDate = ""
+    cmd = ["stat", "--format='%w'", confFile]
+    rawCMD = run_command(cmd, cwd="/usr/bin/", outputCap=True, shell=True, captError=True)
+    if rawCMD[0]:
+        print(confFile, " birth date could NOT be found")
+        return "False, no birth date found"
+    else:
+        print("Birth date of :", confFile, " Found!")
+        birthDate = rawCMD[1][0]
+        print("¤¤¤¤¤¤")
+        birthDate = birthDate[3:13]
+
+    cmd = ["stat", "--format='%y'", confFile]
+    rawCMD = run_command(cmd, cwd="/usr/bin/", outputCap=True, shell=True, captError=True)
+    if rawCMD[0]:
+        print(confFile, " change date could NOT be found")
+        return "False, no change date found"
+    else:
+        print("Change date of :", confFile, " Found!")
+        changeDate = rawCMD[1][0]
+        print("¤¤¤¤¤¤")
+        changeDate = changeDate[3:13]
+
+    birthDateInt = int(birthDate.replace("-", ""))
+    changeDateInt = int(changeDate.replace("-", ""))
+
+    if birthDateInt == changeDateInt:
+        return "True"
+    else:
+        returnMessage = "False Created:" + birthDate + " Changed:" + changeDate
+        return returnMessage
+
+    return returnMessage
 
 
 def create_file_detections():
@@ -500,7 +539,7 @@ def create_file_detections():
     birthDate = birthDate[3:13]
 
     for o in allOrphanFiles:  # Do all tests and put them in a dict
-        resultList = [file_in_dpkgInfo(o), file_in_standardFiles(o), file_ownedByRoot(o), file_createdPostInstallation(o, birthDate)]
+        resultList = [file_in_dpkgInfo(o), file_in_standardFiles(o), file_ownedByRoot(o), file_createdPostInstallation(o, birthDate), file_changedPostInstallation(o)]
         detectionDict[o] = [resultList]
 
     #print(detectionDict)
@@ -525,6 +564,7 @@ def create_html_list(resultDict):
     htmlList.append("<th>In Standardfiles</th>")
     htmlList.append("<th>Owned By root:root</th>")
     htmlList.append("<th>Created on installation date</th>")
+    htmlList.append("<th>Unmodified since installation</th>")
     htmlList.append("</tr>")
 
     for r in resultDict.keys():
@@ -540,6 +580,8 @@ def create_html_list(resultDict):
         htmlList.append(resultString)
         resultString = cell_color(resultDict[r][0][3]) + str(resultDict[r][0][3]) + "</td>"
         htmlList.append(resultString)
+        resultString = cell_color(resultDict[r][0][4]) + str(resultDict[r][0][4]) + "</td>"
+        htmlList.append(resultString)
         htmlList.append("<tr>")
     warning = ""
     create_html_page(name="file_tests", content=htmlList, warning="", links=False, title="File Tests", br=False)
@@ -547,10 +589,10 @@ def create_html_list(resultDict):
 
 
 def cell_color(question):
-    if question:
-        return "<td bgcolor='Green'>"
-    else:
+    if "False" in str(question):
         return "<td bgcolor='Red'>"
+    else:
+        return "<td bgcolor='Green'>"
     pass
 
 
@@ -750,7 +792,7 @@ def create_summary():
         filedata = filedata.replace('[newFiles]', str(summary["newFiles"]))
         filedata = filedata.replace('[orphanFiles]', str(len(allOrphanFiles)))
         filedata = filedata.replace('[configFiles]', str(len(allConfigFiles)))
-        filedata = filedata.replace('[unknownFiles]', str(len(allUnknownFiles)))
+        #filedata = filedata.replace('[unknownFiles]', str(len(allUnknownFiles)))
     listFileData = []
     listFileData.append(filedata)
     return listFileData
@@ -788,7 +830,7 @@ else:
     foundEtcFiles = scan_files_etc()
     if shortrun:
         shortList = []
-        for L in range(50):
+        for L in range(50+500):
             shortList.append(foundEtcFiles[L])
         etcFiles = find_origin_package(shortList)
     else:
