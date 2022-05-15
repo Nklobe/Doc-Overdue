@@ -19,6 +19,7 @@ debugging = False  # show more info
 shortrun = False  # only scan 100 files as a small test
 deletePackages = True  # Should the script delete the reference packages after
                        # use to save on disk space? NOT WORKING ATM! KEEP TRUE
+showCerts = False
 
 largeScan = False  # Scans ALL packages on your system finding files. OBS! SLOW [Not implemented]
 
@@ -185,7 +186,9 @@ def find_origin_package(allFiles):
         print("File: " + file)
         # Sort away unwanted files
         # Checks for certificats
-        if ".pem" in file or ".0" in file or "crt" in file:
+        if showCerts:
+            pass
+        elif ".pem" in file or ".0" in file or "crt" in file:
             print("Cert found!")
             continue
         # Check if its a folder
@@ -589,7 +592,7 @@ def create_html_list(resultDict):
     htmlList.append("<br><b>In DPKG info:</b> Searches through all files under /var/lib/dpkg/info/ for mention of the file<br>")
     htmlList.append("<b>In Standard Files:</b> Uses the files under 'StandardFiles' that contains files that exist on newly installed debian/ubuntu systems,<br> if the file exists in a list, the name of that list will be printed<br>")
     htmlList.append("<b>Owned by root:root :</b> Sees if the file is owned by root, this is the standard for most auto created config files<br>")
-    htmlList.append("<b>Created post installation date:</b> Check if the file was created on the same day as the system was installed<br><br>")
+    htmlList.append("<b>Created on installation date:</b> Check if the file was created on the same day as the system was installed<br>")
     htmlList.append("<b>Unmodified since installation: </b> Checks if the file has been modified since its creation")
     htmlList.append("<style>table, th, td {border:1px solid black; }")
     #htmlList.append("th:nth-child(even),td:nth-child(even) {background-color: #D6EEEE;}</style>")
@@ -619,9 +622,13 @@ def create_html_list(resultDict):
         resultString = cell_color(resultDict[r][0][4]) + str(resultDict[r][0][4]) + "</td>"
         htmlList.append(resultString)
         htmlList.append("<tr>")
-    warning = ""
-    create_html_page(name="file_tests", content=htmlList, warning="", links=False, title="File Tests", br=False)
+    if showCerts:
+        pass
+    else:
+        warning = "All Certificate files has been sorted out! turn of showCert in the begining of the script if you want them included!"
+    create_html_page(name="file_tests", content=htmlList, warning=warning, links=False, title="File Tests", br=False)
     pass
+
 
 
 def cell_color(question):
