@@ -4,7 +4,7 @@
 
 A Bachelor Degree thesis project:
 Doc-Overdue scans your server and compiles a report of what is installed, what configuration files have been modified,  and what those modifications are. 
-The script is tested and built for Ubuntu 20.10 ATM
+
 
 ## Features
 
@@ -14,6 +14,17 @@ The best summary of the project is the research question:
 
 TL:DR it finds all configuration files and checks if they have been changed.
 This will give an overview of the system.
+
+The script checks for a reference file in the APT repository and if found the file is compared to the local file.  
+If a change if found a diff-document is produced and is available via the report site created.  
+The files that lack a reference file is run through a collection of tests to help determine if the file is of relevance.  
+These tests are:  
+* In DPKG info: Searches through all files under /var/lib/dpkg/info/ for mention of the file  
+* In Standard Files: Uses the files under 'StandardFiles' that contains files that exist on newly installed debian/ubuntu systems,  
+    if the file exists in a list, the name of that list will be printed  
+* Owned by root:root : Sees if the file is owned by root, this is the standard for most auto created config files  
+* Created on installation date: Check if the file was created on the same day as the system was installed  
+* Unmodified since installation: Checks if the file has been modified since its creation  
 
 ## Motivation
 
@@ -25,19 +36,33 @@ Requirements for the script to work:
 
 + A moderately modern Debian system aka Debian/Ubuntu/Mint/etc with Python 3.x
 
-+ [Python3](https://facebook.github.io/react/)
++ Python3
 
 + An internet connection
 
+Compatiblity  
+To find the birthdate for files a newer Linux kernel is required.   
+the script still works but the creation date tests wont work.  
+
+| Distro       | Tested             | Birthdate check    |
+|--------------|--------------------|--------------------|
+| Debian 9     | :heavy_check_mark: | :x:                |
+| Debian 10    | :heavy_check_mark: | :x:                |
+| Debian 11    | :heavy_check_mark: | :heavy_check_mark: |
+| Ubuntu 16.04 | :heavy_check_mark: | :x:                |
+| Ubuntu 18.04 | :heavy_check_mark: | :x:                |
+| Ubuntu 20.04 | :heavy_check_mark: | :heavy_check_mark: |
 
 
 ## Installation or Getting Started
 
 **Clone the repository and start Doc-Overdue**
 
-	git clone https://github.com/Nklobe/Doc-Overdue
+    git clone https://github.com/Nklobe/Doc-Overdue
     cd Doc-Overdue
-    Python3 DocOverdue.py
+    python3 DocOverdue.py
+    (Run as Root!)
+    
 
 **Configuration**
 
@@ -54,8 +79,8 @@ There are a few configuration alternatives available inside the script itself:
 
 ## Usage
 
-Once the script is run it produces a website built in Sphinx  
-The website is available under /Doc-Overdue/build/html/index.html  
+Once the script is run it produces a report in the form of a wewbsite
+The website is available under /Doc-Overdue/html/index.html  
 
 If you want to, you can run a small built-in debug webserver in python exposing the site  
 by executing this command  
@@ -70,7 +95,7 @@ This is to guarantee that all needed files are included! OBS!
 
 ## Reference
 
-[Ref to article]
+[Ref to article] (Not published yet)
 
 ## License
 
