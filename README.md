@@ -28,13 +28,13 @@ These tests are:
 
 ## Motivation
 
-To help administrators find changes made to a system as soon as possible
+To help administrators find changes made to a unknown system as fast as possible
 
 ## Requirements
 
 Requirements for the script to work:
 
-+ A moderately modern Debian system aka Debian/Ubuntu/Mint/etc with Python 3.x
++ A moderately modern Debian based system aka Debian/Ubuntu/Mint/etc with Python 3.x
 
 + Python3
 
@@ -63,7 +63,7 @@ the script still works but the creation date tests wont work.
     python3 DocOverdue.py
     (Run as Root!)
     
-
+    
 **Configuration**
 
 There are a few configuration alternatives available inside the script itself:
