@@ -94,8 +94,8 @@ This is to guarantee that all needed files are included! OBS!
   
 
 ## Reference
+[Doc-Overdue Article](http://www.diva-portal.org/smash/record.jsf?dswid=-5547&pid=diva2%3A1703535&c=1&searchType=SIMPLE&language=en&query=tobias+bj%C3%B6rkdahl&af=%5B%5D&aq=%5B%5B%5D%5D&aq2=%5B%5B%5D%5D&aqe=%5B%5D&noOfRows=50&sortOrder=author_sort_asc&sortOrder2=title_sort_asc&onlyFullText=false&sf=all)
 
-[Ref to article] (Not published yet)
 
 ## License
 
